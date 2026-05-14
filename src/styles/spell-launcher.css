@@ -1,0 +1,60 @@
+/* Spell Launcher palette — icon grid, status-effects style */
+
+.spell-launcher-palette {
+  background: transparent;
+  pointer-events: auto;
+}
+
+.spell-launcher-palette .palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 36px);
+  grid-auto-rows: 36px;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  max-width: calc(8 * 36px + 7 * 4px + 16px);
+}
+
+.spell-launcher-palette button.spell-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid transparent;
+  background: rgba(40, 40, 40, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: border-color 80ms ease, background 80ms ease;
+}
+
+.spell-launcher-palette button.spell-icon:hover {
+  border-color: #ffcc66;
+  background: rgba(60, 60, 60, 0.9);
+}
+
+.spell-launcher-palette button.spell-icon:active {
+  transform: scale(0.95);
+}
+
+.spell-launcher-palette button.spell-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  pointer-events: none;
+  border: 0;
+}
+
+.spell-launcher-palette .palette-empty {
+  padding: 12px;
+  color: #ccc;
+  font-style: italic;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid #333;
+  border-radius: 4px;
+}
