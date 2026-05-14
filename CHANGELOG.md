@@ -2,6 +2,22 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.2] — 2026-05-14
+
+### Added — Expanded NAME_KIND_OVERRIDES (buffs, heals, debuffs)
+
+Bless / Hunter's Mark / Aid / Cure Wounds / Mage Armor / Shield / etc. all default to `range` from raw dnd5e metadata (creature target, ranged), even though visually they belong as marker / melee / self. Hard-coding common spell names by visual intent:
+
+- **marker** (persistent rune on target): Hunter's Mark, Hex, Hexblade's Curse, Bestow Curse, Faerie Fire, Bane + the previous Moonbeam/Spiritual Weapon/Entangle/Hunger of Hadar/Cloud of Daggers/Flaming Sphere set
+- **melee** (one-shot on-target burst): Bless, Cure Wounds, Healing Word, Mass Cure Wounds, Mass Healing Word, Lesser Restoration, Aid, Shield of Faith
+- **self** (on caster, no crosshair): Mage Armor, Shield, Armor of Agathys, Mirror Image, Blur, Stoneskin, Haste, False Life, Spirit Guardians, Holy Aura, Sanctuary, Death Ward
+
+These are 5e-conventional and reusable across campaigns. Custom homebrew can still be overridden via the configure dialog.
+
+### Fixed — `.intro.` now blocked from range paths
+
+`Bless` (kind: range pre-v0.4.2, now melee) picked `jb2a.bless.200px.intro.yellow` because the range block list didn't exclude `.intro.`. Range projectile shouldn't be the intro phase of a layered effect. Added `.intro.` to range's block list as well.
+
 ## [0.4.1] — 2026-05-14
 
 ### Fixed — Asset selection now blocks directional variants for static kinds

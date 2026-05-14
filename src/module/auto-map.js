@@ -102,7 +102,7 @@ const KIND_BLOCK = {
   melee: ['.intro.', '.projectile.', '.cast.', '.outro.', '.loop.'],
   self: ['.intro.', '.projectile.', '.outro.', '.cast.'],
   cone: ['.target.', '.complete.', '.hit.', '.loop.'],
-  range: ['.loop.', '.idle.', '.persist.', '.outro.'],
+  range: ['.loop.', '.idle.', '.persist.', '.outro.', '.intro.'],
   teleport: ['.loop.', '.idle.', '.persist.']
 };
 
@@ -112,20 +112,52 @@ const KIND_BLOCK = {
  * Keys are lowercased exact spell names.
  */
 const NAME_KIND_OVERRIDES = {
+  // Teleports
   "misty step": 'teleport',
   "dimension door": 'teleport',
   "thunder step": 'teleport',
   "word of recall": 'teleport',
   "blink": 'teleport',
+  // Persistent area markers (drop at location, lasts)
   "moonbeam": 'marker',
-  "spirit guardians": 'self',
   "spiritual weapon": 'marker',
   "spike growth": 'marker',
   "darkness": 'marker',
   "fog cloud": 'marker',
   "wall of fire": 'marker',
   "entangle": 'marker',
-  "hunger of hadar": 'marker'
+  "hunger of hadar": 'marker',
+  "cloud of daggers": 'marker',
+  "flaming sphere": 'marker',
+  // Buff-on-target markers (persistent rune on a creature)
+  "hunter's mark": 'marker',
+  "hex": 'marker',
+  "hexblade's curse": 'marker',
+  "bestow curse": 'marker',
+  "faerie fire": 'marker',
+  "bane": 'marker',
+  // On-target burst / one-shot heals
+  "bless": 'melee',
+  "cure wounds": 'melee',
+  "healing word": 'melee',
+  "mass cure wounds": 'melee',
+  "mass healing word": 'melee',
+  "lesser restoration": 'melee',
+  "aid": 'melee',
+  "shield of faith": 'melee',
+  // Self-buffs (animation on caster, no crosshair)
+  "mage armor": 'self',
+  "shield": 'self',
+  "armor of agathys": 'self',
+  "mirror image": 'self',
+  "blur": 'self',
+  "stoneskin": 'self',
+  "haste": 'self',
+  "false life": 'self',
+  "spirit guardians": 'self',
+  "holy aura": 'self',
+  "sanctuary": 'self',
+  "death ward": 'self'
 };
 
 /**
