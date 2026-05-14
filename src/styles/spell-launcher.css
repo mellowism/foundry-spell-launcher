@@ -50,6 +50,25 @@
   border: 0;
 }
 
+/* Token HUD button — match the visual weight of other control-icon buttons */
+.spell-launcher-token-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spell-launcher-token-button:hover {
+  color: #ffcc66;
+  border-color: #ffcc66;
+}
+
 .spell-launcher-palette .palette-empty {
   padding: 12px;
   color: #ccc;

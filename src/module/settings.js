@@ -19,19 +19,19 @@ export const DEFAULT_LIBRARY = [
   },
   {
     name: "Burning Hands",
-    icon: 'icons/magic/fire/flame-burning-fingers-orange.webp',
+    icon: 'icons/svg/fire.svg',
     kind: 'cone',
     file: 'jb2a.burning_hands.orange'
   },
   {
     name: "Hunter's Mark",
-    icon: 'icons/magic/control/silhouette-target-orange.webp',
+    icon: 'icons/svg/target.svg',
     kind: 'marker',
     file: 'jb2a.markers.runes.purple.outward'
   },
   {
     name: 'Misty Step',
-    icon: 'icons/magic/movement/abstract-portal-purple.webp',
+    icon: 'icons/svg/clockwork.svg',
     kind: 'teleport',
     file: 'jb2a.misty_step.01.purple'
   }

@@ -24,10 +24,10 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
       return `<div class="palette-empty">${game.i18n.localize('SPELL_LAUNCHER.Settings.SpellLibrary.Hint')}</div>`;
     }
     const cells = spells.map((s, i) => {
-      const tooltip = s.name?.replace(/"/g, '&quot;') ?? '';
+      const tooltip = (s.name ?? '').replace(/"/g, '&quot;');
       const icon = s.icon ?? 'icons/svg/mystery-man.svg';
       return `<button type="button" class="spell-icon" data-spell-index="${i}" data-tooltip="${tooltip}">
-        <img src="${icon}" alt="${tooltip}" />
+        <img src="${icon}" alt="${tooltip}" onerror="this.src='icons/svg/mystery-man.svg'" />
       </button>`;
     }).join('');
     return `<div class="palette-grid">${cells}</div>`;
@@ -51,18 +51,27 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
 }
 
 /**
- * Toggle the palette: open if closed, close if open. Position near the cursor
- * when opening so it appears where the GM was working.
+ * Open or toggle the spell palette.
+ *
+ * @param {{ left?: number, top?: number }} [position] — desired top-left in px.
+ *   Pass coordinates from the trigger element (e.g. Token HUD button rect) so
+ *   the palette appears next to it, mirroring the Assign Status Effects flow.
  */
-export async function togglePalette() {
+export async function togglePalette(position) {
   if (_instance?.rendered) {
     await _instance.close();
     return;
   }
   _instance = new SpellPalette();
-  await _instance.render(true);
-  // Position near cursor on first open. ApplicationV2 default-centers; nudge.
-  const x = Math.max(8, (window.event?.clientX ?? window.innerWidth / 2) - 80);
-  const y = Math.max(8, (window.event?.clientY ?? window.innerHeight / 2) + 12);
-  _instance.setPosition({ left: x, top: y });
+  // V13 ApplicationV2: pass position via render options so the layout is
+  // applied during the same frame as the initial render. Manual setPosition()
+  // after render() crashes if the element hasn't attached to DOM yet
+  // (offsetWidth read on null), which was the bug in v0.1.0.
+  const renderOpts = { force: true };
+  if (position && (Number.isFinite(position.left) || Number.isFinite(position.top))) {
+    renderOpts.position = {};
+    if (Number.isFinite(position.left)) renderOpts.position.left = Math.max(8, position.left);
+    if (Number.isFinite(position.top)) renderOpts.position.top = Math.max(8, position.top);
+  }
+  await _instance.render(renderOpts);
 }

@@ -2,6 +2,18 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.1.1] — 2026-05-14
+
+### Changed — Trigger moved from scene controls to Token HUD
+
+v0.1.0 registered a scene-controls toolbar category "Spells". This worked but felt off-pattern — casting is a token-bound action. v0.1.1 replaces the scene-controls entry with a Token HUD button (right column), mirroring the "Assign Status Effects" flow: click the token, click the wizard-hat button, an icon-grid palette opens next to the HUD.
+
+### Fixed — Three bugs from v0.1.0 prod-test
+
+- **Palette crash on open:** `setPosition()` was called after `render(true)` before the element attached to DOM, throwing on `null.offsetWidth`. Position is now passed via render options.
+- **`onClick`/`onChange` deprecation warning** in V13 scene-controls registration — removed along with the toolbar entry.
+- **Three default-icon 404s** (Burning Hands, Hunter's Mark, Misty Step). The `icons/magic/*` paths I chose don't ship with all installs. Replaced with `icons/svg/*` fallbacks which are universal. Also added `onerror` fallback in the palette so user-configured paths gracefully degrade to a known icon if missing.
+
 ## [0.1.0] — 2026-05-14
 
 ### Added — Initial release

@@ -1,37 +1,35 @@
 import { MODULE_ID } from './settings.js';
 import { togglePalette } from './palette.js';
 
-const CATEGORY = 'spell-launcher';
-const TOOL = 'spell-launcher-open';
+/**
+ * Token HUD button — open the spell palette positioned next to the clicked
+ * button. Mirrors the "Assign Status Effects" flow: a single icon-button on
+ * the Token HUD whose click opens an icon-grid palette beside it.
+ *
+ * Architectural rationale (v0.1.1):
+ *   v0.1.0 registered a scene-controls toolbar category, but casting is a
+ *   token-bound action — Token HUD is the natural home. The scene-controls
+ *   path also tripped a V13 onClick→onChange deprecation warning when the
+ *   category button was activated. Removed.
+ */
+export function onRenderTokenHUD(hud, htmlOrJq) {
+  if (!game.user.isGM) return;
+  const root = htmlOrJq instanceof HTMLElement ? htmlOrJq : htmlOrJq?.[0] ?? htmlOrJq;
+  if (!root?.querySelector) return;
 
-export function registerSceneControls() {
-  Hooks.on('getSceneControlButtons', (controls) => {
-    const title = game.i18n.localize('SPELL_LAUNCHER.Controls.Title');
-    const toolTitle = game.i18n.localize('SPELL_LAUNCHER.Controls.Open');
-
-    const tool = {
-      name: TOOL,
-      title: toolTitle,
-      icon: 'fas fa-hat-wizard',
-      button: true,
-      onChange: () => togglePalette(),
-      // Some V13 builds still wire onClick; keep both as a no-op-safe alias.
-      onClick: () => togglePalette()
-    };
-
-    const category = {
-      name: CATEGORY,
-      title,
-      icon: 'fas fa-hat-wizard',
-      layer: 'tokens',
-      activeTool: TOOL,
-      tools: { [TOOL]: tool }
-    };
-
-    if (Array.isArray(controls)) {
-      controls.push(category);
-    } else if (controls && typeof controls === 'object') {
-      controls[CATEGORY] = category;
-    }
+  const tooltip = game.i18n.localize('SPELL_LAUNCHER.Controls.Open');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'control-icon spell-launcher-token-button';
+  button.dataset.tooltip = tooltip;
+  button.innerHTML = '<i class="fas fa-hat-wizard"></i>';
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = button.getBoundingClientRect();
+    await togglePalette({ left: rect.right + 8, top: rect.top });
   });
+
+  const rightCol = root.querySelector('.col.right') ?? root.querySelector('[class*="right"]') ?? root;
+  rightCol.appendChild(button);
 }
