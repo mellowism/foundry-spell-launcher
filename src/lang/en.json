@@ -8,5 +8,9 @@
   "SPELL_LAUNCHER.Notifications.SpellNotFound": "Spell not found: {name}",
   "SPELL_LAUNCHER.Notifications.SequencerMissing": "Sequencer module is required and not active.",
   "SPELL_LAUNCHER.Notifications.MarkerRemoved": "{name} removed.",
-  "SPELL_LAUNCHER.Notifications.InvalidLibrary": "Spell Library JSON is invalid — using defaults. See console for details."
+  "SPELL_LAUNCHER.Notifications.InvalidLibrary": "Spell Library JSON is invalid — using defaults. See console for details.",
+  "SPELL_LAUNCHER.Configure.Title": "Configure spell",
+  "SPELL_LAUNCHER.Configure.Save": "Save",
+  "SPELL_LAUNCHER.Configure.Cancel": "Cancel",
+  "SPELL_LAUNCHER.Configure.Remove": "Remove mapping"
 }

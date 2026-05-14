@@ -1,0 +1,126 @@
+import { MODULE_ID, SPELL_KINDS, setSpellMapping, removeSpellMapping, getSpellLibrary } from './settings.js';
+
+/**
+ * Inline configure dialog — small ApplicationV2 popup for editing a single
+ * spell-name → { kind, file } mapping. Opened from clicking a grayed-out
+ * (unmapped) spell in the palette.
+ *
+ * Goal: zero JSON. User clicks unmapped spell → picks kind + pastes JB2A
+ * path → saves → spell becomes clickable on next palette open.
+ */
+export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    id: 'spell-launcher-configure',
+    classes: ['spell-launcher-configure'],
+    tag: 'form',
+    window: {
+      frame: true,
+      positioned: true
+    },
+    position: {
+      width: 460,
+      height: 'auto'
+    }
+  };
+
+  constructor(options = {}) {
+    const name = options.spellName ?? '';
+    const existing = getSpellLibrary()[name];
+    super({
+      ...options,
+      window: { ...(options.window ?? {}), title: `Configure spell: ${name}` }
+    });
+    this._spellName = name;
+    this._currentKind = existing?.kind ?? 'range';
+    this._currentFile = existing?.file ?? '';
+    this._onSaved = options.onSaved ?? null;
+  }
+
+  async _renderHTML() {
+    const kindOptions = SPELL_KINDS.map(k => {
+      const sel = k === this._currentKind ? ' selected' : '';
+      return `<option value="${k}"${sel}>${k}</option>`;
+    }).join('');
+    const file = this._currentFile.replace(/"/g, '&quot;');
+    const hasExisting = !!getSpellLibrary()[this._spellName];
+
+    return `
+      <div class="cfg-row">
+        <label>Spell name</label>
+        <div class="cfg-readonly">${this._spellName}</div>
+      </div>
+      <div class="cfg-row">
+        <label for="cfg-kind">Kind</label>
+        <select id="cfg-kind" name="kind">${kindOptions}</select>
+        <div class="cfg-hint">
+          <strong>range</strong> = projectile (Fire Bolt) ·
+          <strong>cone</strong> = cone from caster (Burning Hands) ·
+          <strong>marker</strong> = persistent rune on target (Hunter's Mark) ·
+          <strong>teleport</strong> = poof at caster + destination (Misty Step)
+        </div>
+      </div>
+      <div class="cfg-row">
+        <label for="cfg-file">Sequencer / JB2A asset path</label>
+        <input id="cfg-file" type="text" name="file" value="${file}" placeholder="jb2a.spell_name.color" />
+        <div class="cfg-hint">
+          Use Sequencer Database Viewer to find correct paths.
+          <button type="button" class="cfg-browse">Open Sequencer DB Viewer</button>
+        </div>
+      </div>
+      <div class="cfg-actions">
+        ${hasExisting ? '<button type="button" class="cfg-delete">Remove mapping</button>' : '<span></span>'}
+        <div class="cfg-actions-right">
+          <button type="button" class="cfg-cancel">Cancel</button>
+          <button type="button" class="cfg-save">Save</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async _replaceHTML(html, content) {
+    content.innerHTML = html;
+
+    content.querySelector('.cfg-browse')?.addEventListener('click', () => {
+      try {
+        if (typeof Sequencer?.DatabaseViewer?.show === 'function') {
+          Sequencer.DatabaseViewer.show();
+        } else {
+          ui.notifications.error('Sequencer Database Viewer not available.');
+        }
+      } catch (e) {
+        console.error(`[${MODULE_ID}] DatabaseViewer error`, e);
+      }
+    });
+
+    content.querySelector('.cfg-cancel')?.addEventListener('click', () => this.close());
+
+    content.querySelector('.cfg-delete')?.addEventListener('click', async () => {
+      await removeSpellMapping(this._spellName);
+      ui.notifications.info(`Removed mapping for ${this._spellName}`);
+      await this.close();
+      this._onSaved?.();
+    });
+
+    content.querySelector('.cfg-save')?.addEventListener('click', async () => {
+      const kind = content.querySelector('#cfg-kind')?.value?.trim();
+      const file = content.querySelector('#cfg-file')?.value?.trim();
+      if (!kind || !SPELL_KINDS.includes(kind)) {
+        ui.notifications.warn(`Invalid kind. Pick one of: ${SPELL_KINDS.join(', ')}`);
+        return;
+      }
+      if (!file) {
+        ui.notifications.warn('Asset path is required.');
+        return;
+      }
+      await setSpellMapping(this._spellName, { kind, file });
+      ui.notifications.info(`Saved mapping for ${this._spellName}`);
+      await this.close();
+      this._onSaved?.();
+    });
+  }
+}
+
+export function openConfigureDialog(spellName, opts = {}) {
+  const dlg = new SpellConfigureDialog({ spellName, ...opts });
+  return dlg.render({ force: true });
+}

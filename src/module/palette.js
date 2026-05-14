@@ -1,12 +1,14 @@
 import { MODULE_ID, getSpellLibrary } from './settings.js';
 import { castSpell } from './cast.js';
+import { openConfigureDialog } from './configure-dialog.js';
+import { effectiveSpellLevel, isPactMagic } from './dnd5e-compat.js';
 
 let _instance = null;
 
 /**
  * Build the per-actor spell list grouped by spell level.
- * Returns: { tokenId, actorName, groups: [{ level, label, spells: [...] }] }
- * where each spell has { name, icon, kind, file }.
+ * Returns ALL of the actor's spells (mapped + unmapped) so the GM sees
+ * everything and can configure mappings inline.
  */
 function buildActorSpellList(token) {
   const actor = token?.actor;
@@ -15,29 +17,41 @@ function buildActorSpellList(token) {
   const library = getSpellLibrary();
   const items = actor.items?.contents ?? actor.items ?? [];
 
-  // Collect actor's spell items keyed by level
   const byLevel = new Map();
   for (const item of items) {
     if (item?.type !== 'spell') continue;
+    const level = effectiveSpellLevel(item, actor);
+    const pact = isPactMagic(item);
     const libEntry = library[item.name];
-    if (!libEntry) continue; // skip spells not mapped in library
-    const level = Number(item.system?.level ?? 0);
     if (!byLevel.has(level)) byLevel.set(level, []);
     byLevel.get(level).push({
       name: item.name,
       icon: item.img || 'icons/svg/mystery-man.svg',
-      kind: libEntry.kind,
-      file: libEntry.file
+      mapped: !!libEntry,
+      kind: libEntry?.kind,
+      file: libEntry?.file,
+      pact
     });
   }
 
-  // Sort levels ascending
   const sortedLevels = [...byLevel.keys()].sort((a, b) => a - b);
-  const groups = sortedLevels.map(level => ({
-    level,
-    label: level === 0 ? 'Cantrips' : `${ordinal(level)} Level`,
-    spells: byLevel.get(level).sort((a, b) => a.name.localeCompare(b.name))
-  }));
+  const groups = sortedLevels.map(level => {
+    const spells = byLevel.get(level);
+    // De-dupe by name (DDB import sometimes creates duplicates per prep mode)
+    const seen = new Set();
+    const unique = spells.filter(s => {
+      if (seen.has(s.name)) return false;
+      seen.add(s.name);
+      return true;
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    const anyPact = unique.some(s => s.pact);
+    const label = level === 0
+      ? 'Cantrips'
+      : anyPact
+        ? `Pact Magic — ${ordinal(level)} Level`
+        : `${ordinal(level)} Level`;
+    return { level, label, spells: unique };
+  });
 
   return { tokenId: token.id, actorName: actor.name, groups };
 }
@@ -53,11 +67,6 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     id: 'spell-launcher-palette',
     classes: ['spell-launcher-palette'],
     tag: 'div',
-    // frame: true was the only config that rendered reliably across V13 +
-    // dnd5e 5.x in prod testing. Frameless (window.frame: false) with
-    // width: 'auto' produced a zero-size or DOM-detached state — no visible
-    // palette. Keeping the title-bar frame is intentional UX: gives the GM
-    // a clear "Spells — [actor]" header.
     window: {
       frame: true,
       positioned: true
@@ -69,8 +78,6 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
   };
 
   constructor(options = {}) {
-    // Set the window title to include the actor name so the palette is
-    // clearly identified when multiple windows are open.
     const token = options.token ?? null;
     const data = buildActorSpellList(token);
     const titleSuffix = data.actorName ? ` — ${data.actorName}` : '';
@@ -85,7 +92,7 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
   async _renderHTML() {
     if (!this._data.groups.length) {
       const msg = this._data.actorName
-        ? `<div class="palette-empty">No mapped spells on ${this._data.actorName}.</div>`
+        ? `<div class="palette-empty">${this._data.actorName} has no spell items.</div>`
         : `<div class="palette-empty">No token selected.</div>`;
       return msg;
     }
@@ -93,7 +100,9 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     const groupsHtml = this._data.groups.map(group => {
       const cells = group.spells.map(s => {
         const safeName = (s.name ?? '').replace(/"/g, '&quot;');
-        return `<button type="button" class="spell-icon" data-spell-name="${safeName}" data-tooltip="${safeName}">
+        const tooltip = s.mapped ? safeName : `${safeName} — click to configure`;
+        const cls = s.mapped ? 'spell-icon mapped' : 'spell-icon unmapped';
+        return `<button type="button" class="${cls}" data-spell-name="${safeName}" data-mapped="${s.mapped}" data-tooltip="${tooltip}">
           <img src="${s.icon}" alt="${safeName}" onerror="this.src='icons/svg/mystery-man.svg'" />
         </button>`;
       }).join('');
@@ -114,20 +123,25 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
         ev.stopPropagation();
         const name = btn.dataset.spellName;
         if (!name) return;
-        await this.close();
-        await castSpell(name, { token: this._token });
+        const mapped = btn.dataset.mapped === 'true';
+        if (mapped) {
+          await this.close();
+          await castSpell(name, { token: this._token });
+        } else {
+          // Open configure dialog. Keep palette open behind so user can return.
+          openConfigureDialog(name, {
+            onSaved: () => {
+              // Re-render palette to reflect new mapping
+              this._data = buildActorSpellList(this._token);
+              this.render({ force: true });
+            }
+          });
+        }
       });
     });
   }
 }
 
-/**
- * Open the palette for the given token, or toggle if already open.
- *
- * @param {object} params
- * @param {{ left?: number, top?: number }} [params.position]
- * @param {Token} [params.token] — the Token whose actor's spells are shown
- */
 export async function togglePalette({ position, token } = {}) {
   console.log(`[${MODULE_ID}] togglePalette`, { position, token: token?.id, hadInstance: !!_instance?.rendered });
   if (_instance?.rendered) {

@@ -5,18 +5,17 @@ export const SETTINGS = {
 };
 
 /**
- * Library is a lookup table from spell-name → animation config.
+ * Library is a lookup table: spell-name → animation config.
  * Keys are exact spell names as they appear on actor sheets (case-sensitive).
- * Per-actor palette pulls actor.items filtered for type=spell, then matches
- * names against this table — only matched spells appear in the palette.
+ * Minimal default — only paths verified working in JB2A free. Users add more
+ * via the inline configure dialog (click an unmapped spell in the palette).
  */
 export const DEFAULT_LIBRARY = {
-  'Fire Bolt':       { kind: 'range',    file: 'jb2a.fire_bolt.orange' },
-  'Eldritch Blast':  { kind: 'range',    file: 'jb2a.eldritch_blast.purple' },
-  'Burning Hands':   { kind: 'cone',     file: 'jb2a.burning_hands.orange' },
-  "Hunter's Mark":   { kind: 'marker',   file: 'jb2a.markers.runes.purple.outward' },
-  'Misty Step':      { kind: 'teleport', file: 'jb2a.misty_step.01.purple' }
+  'Fire Bolt':       { kind: 'range', file: 'jb2a.fire_bolt.orange' },
+  'Eldritch Blast':  { kind: 'range', file: 'jb2a.eldritch_blast.purple' }
 };
+
+export const SPELL_KINDS = ['range', 'cone', 'marker', 'teleport'];
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.SPELL_LIBRARY, {
@@ -31,7 +30,7 @@ export function registerSettings() {
 }
 
 /**
- * @returns {Record<string, { kind: string, file: string, icon?: string }>}
+ * @returns {Record<string, { kind: string, file: string }>}
  */
 export function getSpellLibrary() {
   let raw;
@@ -44,7 +43,6 @@ export function getSpellLibrary() {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return DEFAULT_LIBRARY;
-    // Filter to entries with required shape
     const cleaned = {};
     for (const [name, entry] of Object.entries(parsed)) {
       if (!entry || typeof entry !== 'object') continue;
@@ -57,4 +55,20 @@ export function getSpellLibrary() {
     ui.notifications?.warn(game.i18n.localize('SPELL_LAUNCHER.Notifications.InvalidLibrary'));
     return DEFAULT_LIBRARY;
   }
+}
+
+/**
+ * Save (add or overwrite) a single spell mapping. Used by the inline
+ * configure dialog so users never touch JSON directly.
+ */
+export async function setSpellMapping(name, mapping) {
+  const lib = getSpellLibrary();
+  const next = { ...lib, [name]: mapping };
+  await game.settings.set(MODULE_ID, SETTINGS.SPELL_LIBRARY, JSON.stringify(next, null, 2));
+}
+
+export async function removeSpellMapping(name) {
+  const lib = { ...getSpellLibrary() };
+  delete lib[name];
+  await game.settings.set(MODULE_ID, SETTINGS.SPELL_LIBRARY, JSON.stringify(lib, null, 2));
 }

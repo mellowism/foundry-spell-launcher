@@ -2,6 +2,36 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.2.0] — 2026-05-14
+
+### Added — Show all spells + inline configure dialog (zero-JSON)
+
+The palette now shows **all** of the selected actor's spells, not only those mapped in the library. Spells without a library mapping render **grayed out** with a small `+` overlay indicating they can be configured.
+
+**Click an unmapped spell** → an inline configure dialog opens:
+- Spell name (read-only, prefilled)
+- Kind dropdown: range / cone / marker / teleport (with one-line semantics per kind)
+- Asset path text input with **"Open Sequencer DB Viewer"** button — opens Sequencer's built-in asset browser
+- Save / Cancel / Remove
+
+After save, the palette re-renders and the spell is now clickable. No JSON editing required.
+
+### Added — Pact-aware spell grouping (Warlocks)
+
+Warlock pact spells are now grouped under "**Pact Magic — Nth Level**" using the actor's pact slot level (matches the dnd5e character sheet display), instead of base spell level. Non-warlock spells still group by `system.level`.
+
+### Changed — dnd5e 5.1+ API
+
+Migrated `system.preparation.mode` → `system.method` and `system.preparation.prepared` → `system.prepared` via a small `dnd5e-compat.js` shim. Removes the deprecation warning that fired on every palette open.
+
+### Changed — Default library trimmed
+
+Default library now ships with only **Fire Bolt** and **Eldritch Blast** — the two paths I have verified work in JB2A Free. The previous defaults (Burning Hands / Hunter's Mark / Misty Step) shipped with wrong paths that 404'd; pulled until verified. Add more spells via the configure dialog.
+
+### Added — Settings helpers
+
+`setSpellMapping(name, mapping)` and `removeSpellMapping(name)` exported from settings module — used by the configure dialog to mutate the library without exposing JSON to users.
+
 ## [0.1.5] — 2026-05-14
 
 ### Fixed — Palette frame is back (frame: false was the silent-fail cause)
