@@ -1,13 +1,6 @@
 import { MODULE_ID, SPELL_KINDS, setSpellMapping, removeSpellMapping, getSpellLibrary } from './settings.js';
+import { inferKindFromSpell, findJB2APath, findSpellItem } from './auto-map.js';
 
-/**
- * Inline configure dialog — small ApplicationV2 popup for editing a single
- * spell-name → { kind, file } mapping. Opened from clicking a grayed-out
- * (unmapped) spell in the palette.
- *
- * Goal: zero JSON. User clicks unmapped spell → picks kind + pastes JB2A
- * path → saves → spell becomes clickable on next palette open.
- */
 export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: 'spell-launcher-configure',
@@ -31,6 +24,7 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
       window: { ...(options.window ?? {}), title: `Configure spell: ${name}` }
     });
     this._spellName = name;
+    this._actor = options.actor ?? null;
     this._currentKind = existing?.kind ?? 'range';
     this._currentFile = existing?.file ?? '';
     this._onSaved = options.onSaved ?? null;
@@ -43,19 +37,28 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
     }).join('');
     const file = this._currentFile.replace(/"/g, '&quot;');
     const hasExisting = !!getSpellLibrary()[this._spellName];
+    const hasActor = !!this._actor;
 
     return `
       <div class="cfg-row">
         <label>Spell name</label>
         <div class="cfg-readonly">${this._spellName}</div>
       </div>
+      ${hasActor ? `
+      <div class="cfg-row cfg-autodetect">
+        <button type="button" class="cfg-autodetect-btn">
+          <i class="fas fa-magic"></i> Auto-detect from spell metadata + JB2A
+        </button>
+        <div class="cfg-hint">Reads spell properties on the actor and searches JB2A for matching assets.</div>
+      </div>
+      ` : ''}
       <div class="cfg-row">
         <label for="cfg-kind">Kind</label>
         <select id="cfg-kind" name="kind">${kindOptions}</select>
         <div class="cfg-hint">
           <strong>range</strong> = projectile (Fire Bolt) ·
           <strong>cone</strong> = cone from caster (Burning Hands) ·
-          <strong>marker</strong> = persistent rune on target (Hunter's Mark) ·
+          <strong>marker</strong> = persistent rune on target (Hunter's Mark, Moonbeam) ·
           <strong>teleport</strong> = poof at caster + destination (Misty Step)
         </div>
       </div>
@@ -79,6 +82,28 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
 
   async _replaceHTML(html, content) {
     content.innerHTML = html;
+
+    content.querySelector('.cfg-autodetect-btn')?.addEventListener('click', () => {
+      if (!this._actor) return;
+      const item = findSpellItem(this._actor, this._spellName);
+      if (!item) {
+        ui.notifications.warn(`${this._spellName} not found on ${this._actor.name}.`);
+        return;
+      }
+      const kind = inferKindFromSpell(item);
+      const file = findJB2APath(this._spellName);
+      const kindSel = content.querySelector('#cfg-kind');
+      const fileInp = content.querySelector('#cfg-file');
+      if (kindSel) kindSel.value = kind;
+      if (fileInp) fileInp.value = file ?? fileInp.value;
+      this._currentKind = kind;
+      this._currentFile = file ?? this._currentFile;
+      if (file) {
+        ui.notifications.info(`Detected: kind=${kind}, file=${file}`);
+      } else {
+        ui.notifications.warn(`Detected kind=${kind} but no JB2A asset matched "${this._spellName}". Browse manually.`);
+      }
+    });
 
     content.querySelector('.cfg-browse')?.addEventListener('click', () => {
       try {

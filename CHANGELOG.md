@@ -2,6 +2,35 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.3.0] — 2026-05-14
+
+### Added — Auto-map (Sequencer DB + dnd5e metadata)
+
+Major UX win. Two new auto-detection paths so you (almost) never need to manually configure spells.
+
+**Palette header — "Auto-map all" button** appears whenever any spell on the actor is unmapped. Click it and the module:
+1. Reads each unmapped spell's dnd5e metadata (target type, range, units)
+2. Picks a Kind (range / cone / marker / teleport) from the metadata
+3. Searches `Sequencer.Database.publicFlattenedEntries` for a JB2A path matching the spell name (`jb2a.{snake_case_name}.*`, shortest match wins)
+4. Saves the mapping if a path is found; skips spells with no JB2A asset
+5. Re-renders the palette so every successfully-matched spell is now clickable
+
+Notification reports counts: `Auto-mapped N spell(s). M skipped (no JB2A asset found)`. Console log lists the skipped names so you know what to manually configure.
+
+**Configure dialog — "Auto-detect from spell metadata + JB2A" button** appears when the dialog is opened with an actor context. One click pre-fills both Kind and Asset path. You can then edit either before saving.
+
+### Added — `auto-map.js` module
+
+New file exporting `inferKindFromSpell(item)`, `findJB2APath(name)`, `findSpellItem(actor, name)`, and `autoMapActorSpells(actor)`. Public API so other modules / macros can reuse the same logic.
+
+### Changed — Configure dialog accepts `actor` option
+
+Passed end-to-end from the palette button click so the dialog can run auto-detect for the right actor's spell list.
+
+### Notes
+
+The auto-mapper uses the `publicFlattenedEntries` getter on `Sequencer.Database`, which exists in current Sequencer versions. If your Sequencer is older and the getter is missing, auto-map gracefully reports zero matches and you can still configure manually.
+
 ## [0.2.2] — 2026-05-14
 
 ### Fixed — CSS cache hell (versioned stylesheet filename)
