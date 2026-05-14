@@ -130,14 +130,16 @@ const NAME_KIND_OVERRIDES = {
   "cloud of daggers": 'marker',
   "flaming sphere": 'marker',
   // Buff-on-target markers (persistent rune on a creature)
-  "hunter's mark": 'marker',
   "hex": 'marker',
   "hexblade's curse": 'marker',
   "bestow curse": 'marker',
   "faerie fire": 'marker',
   "bane": 'marker',
-  // On-target burst / one-shot heals
-  "bless": 'melee',
+  // Caster-side buffs visualized on the caster (AA convention).
+  // Hunter's Mark in AA pulses on the ranger, not on the target;
+  // Bless radiates from the caster, not between caster and ally.
+  "hunter's mark": 'self',
+  "bless": 'self',
   "cure wounds": 'melee',
   "healing word": 'melee',
   "mass cure wounds": 'melee',

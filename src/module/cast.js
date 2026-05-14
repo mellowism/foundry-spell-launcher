@@ -1,6 +1,47 @@
 import { MODULE_ID, getSpellLibrary } from './settings.js';
+import { findSpellItem } from './auto-map.js';
 
 const PERSIST_PREFIX = `${MODULE_ID}::`;
+
+/**
+ * Use dnd5e's built-in AbilityTemplate preview to let the user place a
+ * rotating cone template (same UX as Automated Animations). Returns the
+ * placed MeasuredTemplate document, or null if no template config or the
+ * user cancelled.
+ */
+async function previewSpellTemplate(actor, spellName) {
+  try {
+    const AbilityTemplate = globalThis.dnd5e?.canvas?.AbilityTemplate;
+    if (!AbilityTemplate?.fromItem) return null;
+    const item = findSpellItem(actor, spellName);
+    if (!item) return null;
+    const template = AbilityTemplate.fromItem(item);
+    if (!template) return null;
+    const placed = await template.drawPreview();
+    if (!placed) return null;
+    // drawPreview returns either the document directly or an array
+    return Array.isArray(placed) ? placed[0] : placed;
+  } catch (e) {
+    console.warn(`[${MODULE_ID}] previewSpellTemplate failed`, e);
+    return null;
+  }
+}
+
+/**
+ * Compute the cone tip (far edge midpoint) in pixel coordinates from a
+ * placed MeasuredTemplate document. Used to anchor a stretchTo-style
+ * animation to the template's actual placement.
+ */
+function templateTip(templateDoc) {
+  const dims = canvas?.dimensions;
+  const pixelsPerUnit = dims ? dims.size / dims.distance : 1;
+  const lengthPx = (templateDoc.distance ?? 15) * pixelsPerUnit;
+  const rad = (templateDoc.direction ?? 0) * (Math.PI / 180);
+  return {
+    x: (templateDoc.x ?? 0) + Math.cos(rad) * lengthPx,
+    y: (templateDoc.y ?? 0) + Math.sin(rad) * lengthPx
+  };
+}
 
 function ensureSequencer() {
   if (typeof Sequencer === 'undefined' || !Sequencer?.Crosshair) {
@@ -42,6 +83,32 @@ export async function castSpell(name, opts = {}) {
         .scaleToObject(1.5)
       .play();
     return;
+  }
+
+  // Cone-kind: use dnd5e's AbilityTemplate preview when available — gives
+  // the AA-style rotatable cone-template UX. The animation then plays
+  // anchored at the template's origin, stretched to the template's tip.
+  // Falls back to crosshair + stretchTo if dnd5e API or spell item is
+  // unavailable.
+  if (spell.kind === 'cone') {
+    const placed = await previewSpellTemplate(source?.actor, name);
+    if (placed) {
+      const tip = templateTip(placed);
+      await new Sequence()
+        .effect()
+          .file(spell.file)
+          .atLocation({ x: placed.x, y: placed.y })
+          .stretchTo(tip)
+        .play();
+      // Auto-delete the template after the animation completes so it
+      // doesn't linger on canvas (Hide Templates on VTT from foundry-
+      // table-mode hides them on the TV side, but GM canvas still shows).
+      try {
+        await placed.delete?.();
+      } catch (_) { /* ignore — template may have already been removed */ }
+      return;
+    }
+    // Fall through to crosshair-based fallback below
   }
 
   let crosshairResult;

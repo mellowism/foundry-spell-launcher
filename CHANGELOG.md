@@ -2,6 +2,29 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.3] — 2026-05-14
+
+### Added — Cone uses dnd5e AbilityTemplate preview (AA-style cone)
+
+The `cone` kind now uses dnd5e's built-in `AbilityTemplate.fromItem()` API to render the rotatable cone-template preview that Automated Animations users will recognize: red triangular template with the configured spell distance ("15 ft" for Burning Hands), mouse-rotated, click to lock direction.
+
+Once the user confirms placement, the spell-launcher plays the JB2A animation anchored at the template's origin, stretched to the template's tip (computed from `direction` + `distance` in canvas pixels). Template is auto-deleted after animation triggers.
+
+Falls back to the crosshair-based flow if `dnd5e.canvas.AbilityTemplate` is unavailable or the spell item isn't on the actor.
+
+**Pairs with foundry-table-mode v0.15.x** which hides MeasuredTemplates on the VTT client — the template is GM-side only during placement, animation plays on both sides.
+
+### Changed — Hunter's Mark and Bless are now `self` kind
+
+Reverting v0.4.2's choice. After comparison testing against Automated Animations, both spells in AA pulse / radiate on the **caster** rather than between caster and target:
+
+- Hunter's Mark in AA pulses on the ranger (representing her tracking ability)
+- Bless in AA radiates from the cleric (representing the blessing's source)
+
+Matching that convention. Hunter's Mark previously `marker`, Bless previously `melee` — both now `self`.
+
+Hex / Hexblade's Curse / Bestow Curse / Faerie Fire / Bane remain `marker` (they're visually about marking the target, not radiating from the caster).
+
 ## [0.4.2] — 2026-05-14
 
 ### Added — Expanded NAME_KIND_OVERRIDES (buffs, heals, debuffs)
