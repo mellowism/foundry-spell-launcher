@@ -2,6 +2,26 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.3.2] — 2026-05-14
+
+### Removed — "Auto-map" header button
+
+Auto-map runs silently on every palette open (v0.3.1). The explicit button is redundant. Header now only shows stats + an "Effects" button. Stats hint now nudges the user toward right-click to configure when there are unmapped spells.
+
+### Changed — Per-effect removal via Manage dialog
+
+The previous "Clear effects" button cleared ALL persistent spell effects at once. v0.3.2 replaces it with an "Effects" button that opens a manage dialog listing each active persistent effect with its own `×` remove button. A "Clear all (N)" button at the bottom is still available for bulk action.
+
+The dialog parses each effect's Sequencer name (`foundry-spell-launcher::SpellName::locationId`) so you see which spell + where without having to identify by canvas position.
+
+### Improved — Kind-aware JB2A path selection (cone fix)
+
+Auto-map's `findJB2APath` now takes a `kindHint` argument. Each kind has a set of keywords that JB2A path components tend to contain (cone: `cone`, `fire_cone`; range: `projectile`, `ray`, `bolt`; marker: `rune`, `circle`, `persistent`, `loop`; teleport: `portal`, `poof`). When multiple paths match a spell name, the auto-mapper prefers the one whose path contains a kind-appropriate keyword.
+
+**Fix:** Burning Hands (kind: cone) should now select a path containing `cone` rather than a generic target-style asset. Same logic applies to other spells where JB2A offers multiple shapes.
+
+If you have a wrong auto-map from a previous version: right-click the spell → Auto-detect → it'll pick the kind-appropriate variant.
+
 ## [0.3.1] — 2026-05-14
 
 ### Added — Auto-map on palette open (no button needed)

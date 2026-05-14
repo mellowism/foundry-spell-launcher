@@ -45,16 +45,31 @@ function toSnake(name) {
 }
 
 /**
- * Find a JB2A asset path matching this spell name.
- * Strategy:
- *   1. Exact-prefix match: jb2a.{snake_case}.* — pick shortest matching path
- *      (shortest tends to be the simplest/default variant)
- *   2. If no exact match: contains-anywhere match against the snake_case
- *   3. Return null if nothing found
- *
- * Returns the chosen path string, or null.
+ * Keywords that hint at a given kind in JB2A asset paths.
+ * Used to prefer kind-appropriate variants when multiple paths match a name.
  */
-export function findJB2APath(spellName) {
+const KIND_KEYWORDS = {
+  cone: ['cone', 'fire_cone', 'flame_cone', '.cone.'],
+  range: ['projectile', 'ray', 'bolt', 'missile', 'breath'],
+  marker: ['rune', 'circle', 'mark', 'symbol', 'persistent', 'loop', 'target', 'pentagram', 'magic_signs'],
+  teleport: ['poof', 'portal', 'teleport', 'misty_step', 'door']
+};
+
+/**
+ * Find a JB2A asset path matching this spell name, optionally preferring
+ * variants whose path contains keywords appropriate for the given kind.
+ *
+ * Strategy:
+ *   1. Collect candidate paths: exact-prefix `jb2a.{snake}.*` plus
+ *      contains-anywhere `jb2a.{snake}` matches.
+ *   2. If kindHint is provided and KIND_KEYWORDS has entries for it, filter
+ *      candidates to those containing a kind-keyword. If any survive, use
+ *      them. Otherwise fall back to the full candidate set.
+ *   3. Pick the shortest path (usually the default/simplest variant alias).
+ *
+ * Returns the chosen path string, or null if no candidates.
+ */
+export function findJB2APath(spellName, kindHint = null) {
   if (!spellName) return null;
   const snake = toSnake(spellName);
   if (!snake) return null;
@@ -67,19 +82,28 @@ export function findJB2APath(spellName) {
 
   const prefix = `jb2a.${snake}.`;
   const exactMatches = all.filter(p => p.toLowerCase().startsWith(prefix));
-  if (exactMatches.length) {
-    // Prefer the shortest path — usually the default/simplest variant alias
-    return exactMatches.sort((a, b) => a.length - b.length)[0];
-  }
-
-  // Fallback: contains the snake form anywhere after jb2a.
   const containsKey = `jb2a.${snake}`;
-  const containsMatches = all.filter(p => p.toLowerCase().includes(containsKey));
-  if (containsMatches.length) {
-    return containsMatches.sort((a, b) => a.length - b.length)[0];
+  const containsMatches = all.filter(p =>
+    p.toLowerCase().includes(containsKey) && !p.toLowerCase().startsWith(prefix)
+  );
+
+  const allCandidates = [...exactMatches, ...containsMatches];
+  if (!allCandidates.length) return null;
+
+  // Kind-hint preference: filter to candidates whose path contains a keyword
+  // appropriate for the kind. Only narrow if at least one survives.
+  let pool = allCandidates;
+  if (kindHint && KIND_KEYWORDS[kindHint]) {
+    const keywords = KIND_KEYWORDS[kindHint];
+    const preferred = allCandidates.filter(p => {
+      const low = p.toLowerCase();
+      return keywords.some(kw => low.includes(kw));
+    });
+    if (preferred.length) pool = preferred;
   }
 
-  return null;
+  // Shortest path within the chosen pool — usually the simplest variant alias
+  return pool.sort((a, b) => a.length - b.length)[0];
 }
 
 /**
@@ -107,7 +131,7 @@ export async function autoMapActorSpells(actor) {
     if (library[item.name]) continue; // already mapped, skip
 
     const kind = inferKindFromSpell(item);
-    const file = findJB2APath(item.name);
+    const file = findJB2APath(item.name, kind);
     if (!file) {
       results.skipped.push(item.name);
       continue;

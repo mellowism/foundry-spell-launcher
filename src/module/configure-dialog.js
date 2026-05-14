@@ -91,7 +91,7 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
         return;
       }
       const kind = inferKindFromSpell(item);
-      const file = findJB2APath(this._spellName);
+      const file = findJB2APath(this._spellName, kind);
       const kindSel = content.querySelector('#cfg-kind');
       const fileInp = content.querySelector('#cfg-file');
       if (kindSel) kindSel.value = kind;

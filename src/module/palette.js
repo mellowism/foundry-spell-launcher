@@ -3,31 +3,7 @@ import { castSpell } from './cast.js';
 import { openConfigureDialog } from './configure-dialog.js';
 import { effectiveSpellLevel, isPactMagic } from './dnd5e-compat.js';
 import { autoMapActorSpells } from './auto-map.js';
-
-const PERSIST_PREFIX = `${MODULE_ID}::`;
-
-async function clearAllPersistentEffects() {
-  try {
-    const mgr = Sequencer?.EffectManager;
-    if (!mgr) {
-      ui.notifications.warn('Sequencer EffectManager unavailable');
-      return 0;
-    }
-    const all = mgr.getEffects?.() ?? [];
-    const ours = all.filter(e => {
-      const n = e?.data?.name ?? e?.name ?? '';
-      return String(n).startsWith(PERSIST_PREFIX);
-    });
-    for (const e of ours) {
-      const n = e?.data?.name ?? e?.name;
-      if (n) await mgr.endEffects({ name: n });
-    }
-    return ours.length;
-  } catch (err) {
-    console.error(`[${MODULE_ID}] clearAllPersistentEffects`, err);
-    return 0;
-  }
-}
+import { openManageEffectsDialog } from './manage-effects.js';
 
 let _instance = null;
 
@@ -145,16 +121,13 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     const totalSpells = this._data.groups.reduce((a, g) => a + g.spells.length, 0);
     const unmappedCount = this._data.groups.reduce((a, g) => a + g.spells.filter(s => !s.mapped).length, 0);
     const statsHtml = unmappedCount > 0
-      ? `<span class="palette-stats">${unmappedCount} of ${totalSpells} unmapped</span>`
+      ? `<span class="palette-stats">${unmappedCount} of ${totalSpells} unmapped — right-click a spell to configure</span>`
       : `<span class="palette-stats all-mapped">All ${totalSpells} spells mapped ✓</span>`;
     const headerHtml = `<div class="palette-header">
       ${statsHtml}
       <div class="palette-header-actions">
-        ${unmappedCount > 0 ? `<button type="button" class="palette-automap" data-tooltip="Auto-map all unmapped spells using Sequencer/JB2A database">
-          <i class="fas fa-magic"></i> Auto-map
-        </button>` : ''}
-        <button type="button" class="palette-clear-effects" data-tooltip="Remove all persistent spell effects (Moonbeam, Hunter's Mark, Entangle, etc.) currently on the scene">
-          <i class="fas fa-broom"></i> Clear effects
+        <button type="button" class="palette-manage-effects" data-tooltip="Manage persistent spell effects on this scene">
+          <i class="fas fa-list"></i> Effects
         </button>
       </div>
     </div>`;
@@ -180,38 +153,10 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
   async _replaceHTML(html, content) {
     content.innerHTML = html;
 
-    content.querySelector('.palette-clear-effects')?.addEventListener('click', async (ev) => {
+    content.querySelector('.palette-manage-effects')?.addEventListener('click', async (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      const count = await clearAllPersistentEffects();
-      ui.notifications.info(`Cleared ${count} persistent effect(s).`);
-    });
-
-    content.querySelector('.palette-automap')?.addEventListener('click', async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const actor = this._token?.actor;
-      if (!actor) {
-        ui.notifications.warn('No actor on this token.');
-        return;
-      }
-      const btn = ev.currentTarget;
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mapping...';
-      try {
-        const result = await autoMapActorSpells(actor);
-        const mapped = result.mapped.length;
-        const skipped = result.skipped.length;
-        ui.notifications.info(`Auto-mapped ${mapped} spell(s). ${skipped} skipped (no JB2A asset found).`);
-        if (skipped) {
-          console.log(`[${MODULE_ID}] auto-map skipped (no JB2A match):`, result.skipped);
-        }
-        console.log(`[${MODULE_ID}] auto-map results:`, result);
-      } catch (e) {
-        console.error(`[${MODULE_ID}] auto-map error`, e);
-        ui.notifications.error('Auto-map failed — see console.');
-      }
-      await this._refresh();
+      openManageEffectsDialog();
     });
 
     content.querySelectorAll('button[data-spell-name]').forEach(btn => {

@@ -29,36 +29,84 @@
   display: flex;
   gap: 6px;
 }
-.spell-launcher-palette .palette-automap,
-.spell-launcher-palette .palette-clear-effects {
+.spell-launcher-palette .palette-manage-effects {
   padding: 4px 10px;
   border: 1px solid #678;
   color: #eee;
   cursor: pointer;
   border-radius: 3px;
   font-size: 11px;
+  background: rgba(50, 60, 80, 0.8);
 }
-.spell-launcher-palette .palette-automap {
-  background: rgba(60, 80, 60, 0.8);
+.spell-launcher-palette .palette-manage-effects:hover {
+  background: rgba(70, 90, 120, 0.9);
+  border-color: #6ab;
 }
-.spell-launcher-palette .palette-clear-effects {
-  background: rgba(80, 60, 60, 0.7);
-  border-color: #855;
+
+/* Manage persistent effects dialog */
+.spell-launcher-manage-effects .mfx-shell {
+  padding: 4px;
 }
-.spell-launcher-palette .palette-automap:hover {
-  background: rgba(80, 110, 70, 0.9);
-  border-color: #7c4;
+.spell-launcher-manage-effects .mfx-empty {
+  padding: 14px;
+  color: #aaa;
+  font-style: italic;
+  text-align: center;
 }
-.spell-launcher-palette .palette-clear-effects:hover {
-  background: rgba(110, 70, 70, 0.9);
+.spell-launcher-manage-effects .mfx-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(40, 40, 40, 0.5);
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+.spell-launcher-manage-effects .mfx-name {
+  color: #ffcc66;
+  font-weight: 600;
+}
+.spell-launcher-manage-effects .mfx-loc {
+  color: #888;
+  font-family: monospace;
+  font-size: 11px;
+}
+.spell-launcher-manage-effects .mfx-remove {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(110, 60, 60, 0.8);
+  border: 1px solid #855;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+}
+.spell-launcher-manage-effects .mfx-remove:hover {
+  background: rgba(160, 70, 70, 0.95);
   border-color: #c66;
 }
-.spell-launcher-palette .palette-automap:disabled,
-.spell-launcher-palette .palette-clear-effects:disabled {
-  background: rgba(40, 40, 40, 0.6);
-  border-color: #444;
-  color: #888;
-  cursor: wait;
+.spell-launcher-manage-effects .mfx-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a2a;
+}
+.spell-launcher-manage-effects .mfx-clear-all {
+  padding: 6px 14px;
+  background: rgba(100, 60, 60, 0.7);
+  border: 1px solid #855;
+  color: #eee;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.spell-launcher-manage-effects .mfx-clear-all:hover {
+  background: rgba(140, 70, 70, 0.9);
+  border-color: #c66;
 }
 
 .spell-launcher-palette .palette-group {
