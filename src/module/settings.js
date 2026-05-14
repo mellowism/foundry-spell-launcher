@@ -4,38 +4,19 @@ export const SETTINGS = {
   SPELL_LIBRARY: 'spellLibrary'
 };
 
-export const DEFAULT_LIBRARY = [
-  {
-    name: 'Fire Bolt',
-    icon: 'icons/magic/fire/projectile-fireball-orange.webp',
-    kind: 'range',
-    file: 'jb2a.fire_bolt.orange'
-  },
-  {
-    name: 'Eldritch Blast',
-    icon: 'icons/magic/lightning/bolt-strike-blue.webp',
-    kind: 'range',
-    file: 'jb2a.eldritch_blast.purple'
-  },
-  {
-    name: "Burning Hands",
-    icon: 'icons/svg/fire.svg',
-    kind: 'cone',
-    file: 'jb2a.burning_hands.orange'
-  },
-  {
-    name: "Hunter's Mark",
-    icon: 'icons/svg/target.svg',
-    kind: 'marker',
-    file: 'jb2a.markers.runes.purple.outward'
-  },
-  {
-    name: 'Misty Step',
-    icon: 'icons/svg/clockwork.svg',
-    kind: 'teleport',
-    file: 'jb2a.misty_step.01.purple'
-  }
-];
+/**
+ * Library is a lookup table from spell-name → animation config.
+ * Keys are exact spell names as they appear on actor sheets (case-sensitive).
+ * Per-actor palette pulls actor.items filtered for type=spell, then matches
+ * names against this table — only matched spells appear in the palette.
+ */
+export const DEFAULT_LIBRARY = {
+  'Fire Bolt':       { kind: 'range',    file: 'jb2a.fire_bolt.orange' },
+  'Eldritch Blast':  { kind: 'range',    file: 'jb2a.eldritch_blast.purple' },
+  'Burning Hands':   { kind: 'cone',     file: 'jb2a.burning_hands.orange' },
+  "Hunter's Mark":   { kind: 'marker',   file: 'jb2a.markers.runes.purple.outward' },
+  'Misty Step':      { kind: 'teleport', file: 'jb2a.misty_step.01.purple' }
+};
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.SPELL_LIBRARY, {
@@ -49,6 +30,9 @@ export function registerSettings() {
   });
 }
 
+/**
+ * @returns {Record<string, { kind: string, file: string, icon?: string }>}
+ */
 export function getSpellLibrary() {
   let raw;
   try {
@@ -59,8 +43,15 @@ export function getSpellLibrary() {
   if (!raw || typeof raw !== 'string') return DEFAULT_LIBRARY;
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_LIBRARY;
-    return parsed.filter(s => s && typeof s.name === 'string' && typeof s.file === 'string' && typeof s.kind === 'string');
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return DEFAULT_LIBRARY;
+    // Filter to entries with required shape
+    const cleaned = {};
+    for (const [name, entry] of Object.entries(parsed)) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (typeof entry.kind !== 'string' || typeof entry.file !== 'string') continue;
+      cleaned[name] = entry;
+    }
+    return Object.keys(cleaned).length ? cleaned : DEFAULT_LIBRARY;
   } catch (e) {
     console.warn(`[${MODULE_ID}] Spell Library JSON parse error — using defaults`, e);
     ui.notifications?.warn(game.i18n.localize('SPELL_LAUNCHER.Notifications.InvalidLibrary'));

@@ -2,7 +2,7 @@
   "SPELL_LAUNCHER.Controls.Title": "Spells",
   "SPELL_LAUNCHER.Controls.Open": "Open Spell Palette",
   "SPELL_LAUNCHER.Settings.SpellLibrary.Name": "Spell Library (JSON)",
-  "SPELL_LAUNCHER.Settings.SpellLibrary.Hint": "JSON array of spell definitions. Each entry: { name, icon, kind, file }. Kind = range | cone | marker | teleport. Edit to add, remove, or reorder spells. Invalid JSON falls back to defaults — check browser console for parse errors.",
+  "SPELL_LAUNCHER.Settings.SpellLibrary.Hint": "JSON object mapping spell-name → animation. Each value: { kind, file }. Kind = range | cone | marker | teleport. Spell names must match the actor's sheet exactly (case-sensitive). Only mapped spells appear in the per-actor palette. Invalid JSON falls back to defaults — check browser console for parse errors.",
   "SPELL_LAUNCHER.Palette.Title": "Cast Spell",
   "SPELL_LAUNCHER.Palette.SelectCaster": "Select a caster token first.",
   "SPELL_LAUNCHER.Notifications.SpellNotFound": "Spell not found: {name}",

@@ -1,21 +1,50 @@
-/* Spell Launcher palette — icon grid, status-effects style */
+/* Spell Launcher palette — per-actor, grouped by spell level */
 
 .spell-launcher-palette {
   background: transparent;
   pointer-events: auto;
 }
 
-.spell-launcher-palette .palette-grid {
+.spell-launcher-palette .palette-shell {
+  background: rgba(20, 20, 20, 0.94);
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  padding: 6px 8px 8px 8px;
+  min-width: 200px;
+}
+
+.spell-launcher-palette .palette-actor {
+  font-size: 11px;
+  color: #ffcc66;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 0 6px 2px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 6px;
+}
+
+.spell-launcher-palette .palette-group {
+  margin-bottom: 6px;
+}
+
+.spell-launcher-palette .palette-group:last-child {
+  margin-bottom: 0;
+}
+
+.spell-launcher-palette .group-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 0;
+}
+
+.spell-launcher-palette .group-row {
   display: grid;
   grid-template-columns: repeat(8, 36px);
   grid-auto-rows: 36px;
   gap: 4px;
-  padding: 8px;
-  background: rgba(20, 20, 20, 0.92);
-  border: 1px solid #333;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  max-width: calc(8 * 36px + 7 * 4px + 16px);
 }
 
 .spell-launcher-palette button.spell-icon {
@@ -50,6 +79,16 @@
   border: 0;
 }
 
+.spell-launcher-palette .palette-empty {
+  padding: 10px 12px;
+  color: #ccc;
+  font-style: italic;
+  background: rgba(20, 20, 20, 0.94);
+  border: 1px solid #333;
+  border-radius: 6px;
+  min-width: 200px;
+}
+
 /* Token HUD button — match the visual weight of other control-icon buttons */
 .spell-launcher-token-button {
   width: 36px;
@@ -67,13 +106,4 @@
 .spell-launcher-token-button:hover {
   color: #ffcc66;
   border-color: #ffcc66;
-}
-
-.spell-launcher-palette .palette-empty {
-  padding: 12px;
-  color: #ccc;
-  font-style: italic;
-  background: rgba(20, 20, 20, 0.92);
-  border: 1px solid #333;
-  border-radius: 4px;
 }

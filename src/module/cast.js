@@ -10,15 +10,22 @@ function ensureSequencer() {
   return true;
 }
 
-export async function castSpell(name) {
-  const spell = getSpellLibrary().find(s => s.name === name);
+/**
+ * Cast a spell by name.
+ *
+ * @param {string} name — spell name (must exist in library)
+ * @param {{ token?: Token }} [opts] — caster token. Falls back to controlled[0].
+ */
+export async function castSpell(name, opts = {}) {
+  const lib = getSpellLibrary();
+  const spell = lib[name];
   if (!spell) {
     ui.notifications.error(game.i18n.format('SPELL_LAUNCHER.Notifications.SpellNotFound', { name }));
     return;
   }
   if (!ensureSequencer()) return;
 
-  const source = canvas.tokens.controlled[0];
+  const source = opts.token ?? canvas.tokens.controlled[0];
   if (spell.kind !== 'marker' && !source) {
     ui.notifications.warn(game.i18n.localize('SPELL_LAUNCHER.Palette.SelectCaster'));
     return;
@@ -33,7 +40,7 @@ export async function castSpell(name) {
     console.error(`[${MODULE_ID}] Crosshair error`, e);
     return;
   }
-  if (!crosshairResult) return; // user cancelled
+  if (!crosshairResult) return;
 
   switch (spell.kind) {
     case 'range':
@@ -58,11 +65,11 @@ export async function castSpell(name) {
     case 'marker': {
       const id = crosshairResult.id
         ?? `${Math.round(crosshairResult.x ?? 0)},${Math.round(crosshairResult.y ?? 0)}`;
-      const seqName = `${PERSIST_PREFIX}${spell.name}::${id}`;
+      const seqName = `${PERSIST_PREFIX}${name}::${id}`;
       const existing = Sequencer.EffectManager.getEffects({ name: seqName });
       if (existing.length) {
         await Sequencer.EffectManager.endEffects({ name: seqName });
-        ui.notifications.info(game.i18n.format('SPELL_LAUNCHER.Notifications.MarkerRemoved', { name: spell.name }));
+        ui.notifications.info(game.i18n.format('SPELL_LAUNCHER.Notifications.MarkerRemoved', { name }));
         return;
       }
       await new Sequence()
