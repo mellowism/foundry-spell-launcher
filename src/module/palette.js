@@ -72,7 +72,7 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
       positioned: true
     },
     position: {
-      width: 'auto',
+      width: 380,
       height: 'auto'
     }
   };
@@ -80,6 +80,15 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
   constructor(options = {}) {
     const token = options.token ?? null;
     const data = buildActorSpellList(token);
+    // Diagnostic: confirm library + mapping at render time so we can debug
+    // if all spells render as unmapped or if mapping is failing.
+    const library = getSpellLibrary();
+    console.log('[foundry-spell-launcher] palette render', {
+      libraryKeys: Object.keys(library),
+      actor: data.actorName,
+      spellCount: data.groups.reduce((acc, g) => acc + g.spells.length, 0),
+      mappedCount: data.groups.reduce((acc, g) => acc + g.spells.filter(s => s.mapped).length, 0)
+    });
     const titleSuffix = data.actorName ? ` — ${data.actorName}` : '';
     super({
       ...options,

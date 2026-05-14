@@ -7,25 +7,11 @@
 
 .spell-launcher-palette .palette-shell {
   background: rgba(20, 20, 20, 0.94);
-  border: 1px solid #333;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  padding: 6px 8px 8px 8px;
-  min-width: 200px;
-}
-
-.spell-launcher-palette .palette-actor {
-  font-size: 11px;
-  color: #ffcc66;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 2px 0 6px 2px;
-  border-bottom: 1px solid #333;
-  margin-bottom: 6px;
+  padding: 4px 8px 8px 8px;
 }
 
 .spell-launcher-palette .palette-group {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .spell-launcher-palette .palette-group:last-child {
@@ -33,18 +19,21 @@
 }
 
 .spell-launcher-palette .group-label {
-  font-size: 10px;
-  color: #888;
+  font-size: 11px;
+  color: #aaa;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 2px 0;
+  padding: 4px 2px 4px 2px;
+  border-bottom: 1px solid #2a2a2a;
+  margin-bottom: 6px;
 }
 
 .spell-launcher-palette .group-row {
-  display: grid;
-  grid-template-columns: repeat(8, 36px);
+  display: grid !important;
+  grid-template-columns: repeat(8, 36px) !important;
   grid-auto-rows: 36px;
   gap: 4px;
+  justify-content: start;
 }
 
 .spell-launcher-palette button.spell-icon {
@@ -52,19 +41,24 @@
   height: 36px;
   padding: 0;
   margin: 0;
-  border: 1px solid transparent;
+  border: 1px solid #2a2a2a;
   background: rgba(40, 40, 40, 0.8);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 2px;
-  transition: border-color 80ms ease, background 80ms ease;
+  transition: border-color 80ms ease, background 80ms ease, opacity 80ms ease;
+  position: relative;
 }
 
-.spell-launcher-palette button.spell-icon:hover {
-  border-color: #ffcc66;
-  background: rgba(60, 60, 60, 0.9);
+.spell-launcher-palette button.spell-icon.mapped {
+  border-color: #4a5;
+}
+
+.spell-launcher-palette button.spell-icon.mapped:hover {
+  border-color: #7c4;
+  background: rgba(60, 80, 60, 0.9);
 }
 
 .spell-launcher-palette button.spell-icon:active {
@@ -79,48 +73,46 @@
   border: 0;
 }
 
-/* Unmapped spells: grayed out, with a small dashed border + "?" overlay hint */
+/* Unmapped spells: heavy grayscale + dashed border + "+" badge */
 .spell-launcher-palette button.spell-icon.unmapped {
-  border-style: dashed;
-  border-color: #555;
-  position: relative;
+  border-style: dashed !important;
+  border-color: #555 !important;
+  opacity: 0.55 !important;
 }
 .spell-launcher-palette button.spell-icon.unmapped img {
-  filter: grayscale(0.85) opacity(0.55);
+  filter: grayscale(1) !important;
 }
 .spell-launcher-palette button.spell-icon.unmapped::after {
   content: '+';
   position: absolute;
-  bottom: -2px;
-  right: -2px;
+  bottom: -3px;
+  right: -3px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #444;
-  color: #ddd;
-  font-size: 11px;
+  background: #c70;
+  color: #fff;
+  font-size: 12px;
   font-weight: bold;
   line-height: 14px;
   text-align: center;
-  border: 1px solid #888;
+  border: 1px solid #000;
   pointer-events: none;
+  z-index: 2;
 }
 .spell-launcher-palette button.spell-icon.unmapped:hover {
-  border-color: #ffcc66;
-  border-style: solid;
+  border-color: #ffcc66 !important;
+  border-style: solid !important;
+  opacity: 0.95 !important;
 }
 .spell-launcher-palette button.spell-icon.unmapped:hover img {
-  filter: grayscale(0.5) opacity(0.85);
+  filter: grayscale(0.3) !important;
 }
 
 .spell-launcher-palette .palette-empty {
   padding: 10px 12px;
   color: #ccc;
   font-style: italic;
-  background: rgba(20, 20, 20, 0.94);
-  border: 1px solid #333;
-  border-radius: 6px;
-  min-width: 200px;
 }
 
 /* Configure dialog — inline spell mapping editor */

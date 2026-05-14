@@ -2,6 +2,20 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.2.1] — 2026-05-14
+
+### Fixed — Visual gaps in v0.2.0 palette
+
+Three CSS/layout issues from v0.2.0 prod test:
+
+- **Vertical-list layout (1 column):** window `position.width: 'auto'` collapsed below 8-column grid threshold. Forced `width: 380` to guarantee 8×36px columns + gaps fit. Grid CSS rules tagged `!important` to defeat any Foundry-side overrides.
+- **Unmapped spells not visibly grayed:** stronger styling — `opacity: 0.55 !important` on the button itself, `grayscale(1)` on the image, dashed border in `#555`, and a bright orange `+` badge in the corner. Hover lights it up to almost-full color. Unmistakable.
+- **Mapped spells now have a soft green border** (`#4a5`) so the visual distinction between mapped/unmapped is obvious even before hover.
+
+### Added — Diagnostic log on palette render
+
+`[foundry-spell-launcher] palette render` logs library keys, actor, total spell count, and mapped count on every open. If mapped count is 0 when it shouldn't be, the cause is now visible without code inspection.
+
 ## [0.2.0] — 2026-05-14
 
 ### Added — Show all spells + inline configure dialog (zero-JSON)
