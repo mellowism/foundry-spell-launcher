@@ -2,6 +2,22 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.3.3] — 2026-05-14
+
+### Fixed — inferKindFromSpell reads dnd5e 5.x schema
+
+dnd5e 5.x relocated the spell AoE-shape from `system.target.type` to `system.target.template.type`. The "affects" sub-object holds creature/enemy/ally targeting. v0.3.2 still read the legacy path, so Burning Hands (and other AoE spells) auto-detected as `range` instead of `cone`.
+
+**Fix:** read both `system.target.template.type` (new) and `system.target.type` (legacy), preferring template. Same for `affects.type`. Added `circle`, `object`, `space`, `wall` to the recognized type set.
+
+Added a `[foundry-spell-launcher] inferKind` console log per call so future schema shifts are visible without code spelunking.
+
+### Added — Save-mapping diagnostic log
+
+Saving a mapping now logs `[foundry-spell-launcher] saving mapping { spell, kind, file }` so users can verify the dropdown value is actually being captured (a v0.3.2 user reported the dropdown change wasn't sticking — log will confirm whether it's a read issue or a render issue).
+
+Save notification also now includes the kind: `Saved Burning Hands as kind=cone`.
+
 ## [0.3.2] — 2026-05-14
 
 ### Removed — "Auto-map" header button

@@ -129,6 +129,7 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
     content.querySelector('.cfg-save')?.addEventListener('click', async () => {
       const kind = content.querySelector('#cfg-kind')?.value?.trim();
       const file = content.querySelector('#cfg-file')?.value?.trim();
+      console.log(`[${MODULE_ID}] saving mapping`, { spell: this._spellName, kind, file });
       if (!kind || !SPELL_KINDS.includes(kind)) {
         ui.notifications.warn(`Invalid kind. Pick one of: ${SPELL_KINDS.join(', ')}`);
         return;
@@ -138,7 +139,7 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
         return;
       }
       await setSpellMapping(this._spellName, { kind, file });
-      ui.notifications.info(`Saved mapping for ${this._spellName}`);
+      ui.notifications.info(`Saved ${this._spellName} as kind=${kind}`);
       await this.close();
       this._onSaved?.();
     });

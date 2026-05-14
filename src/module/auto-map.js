@@ -13,15 +13,36 @@ import { MODULE_ID, setSpellMapping, getSpellLibrary } from './settings.js';
  *   anything else            → 'range' (safe default)
  */
 export function inferKindFromSpell(item) {
-  const target = item?.system?.target;
-  const range = item?.system?.range;
-  const targetType = String(target?.type ?? '').toLowerCase();
+  const system = item?.system ?? {};
+  const range = system.range;
+
+  // Schema shift in dnd5e 5.x: AoE shape moved from system.target.type to
+  // system.target.template.type. Affects (creature/enemy/ally) lives on
+  // system.target.affects.type. Read both, prefer template.
+  const templateType = String(
+    system.target?.template?.type
+      ?? system.target?.type
+      ?? ''
+  ).toLowerCase();
+  const affectsType = String(
+    system.target?.affects?.type
+      ?? ''
+  ).toLowerCase();
+  const targetType = templateType || affectsType;
+
+  // Diagnostic log so future schema shifts are easier to track.
+  console.log(`[${MODULE_ID}] inferKind`, {
+    name: item?.name,
+    templateType,
+    affectsType,
+    resolved: targetType
+  });
 
   if (targetType === 'cone') return 'cone';
-  if (['sphere', 'cube', 'cylinder', 'radius', 'square'].includes(targetType)) return 'marker';
+  if (['sphere', 'cube', 'cylinder', 'radius', 'square', 'circle'].includes(targetType)) return 'marker';
   if (targetType === 'self') return 'marker';
-  if (targetType === 'line') return 'range';
-  if (targetType === 'creature' || targetType === 'enemy' || targetType === 'ally') {
+  if (targetType === 'line' || targetType === 'wall') return 'range';
+  if (['creature', 'enemy', 'ally', 'object', 'space'].includes(targetType)) {
     const units = String(range?.units ?? '').toLowerCase();
     if (units === 'touch') return 'range';
     return 'range';
