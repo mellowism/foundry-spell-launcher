@@ -2,6 +2,19 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.1.3] — 2026-05-14
+
+### Diagnostic — Force-visible palette to isolate rendering bug
+
+v0.1.2 confirmed the click handler fires and togglePalette runs, but the palette wasn't visible — instead the user saw a chat-sidebar toggle. v0.1.3 forces the palette into a worst-case visible state to isolate whether ApplicationV2 is rendering at all:
+
+- **`frame: true`** with title "Spells" — gives the palette a window with title bar + close button. Cannot be hidden by CSS or layout.
+- **Forced position (300, 300)** — center-of-screen, ignores caller-supplied position. Eliminates token-HUD overlap as a factor.
+- **Forced width 360** — explicit size, no auto-shrink-to-content.
+- **DOM-presence log** after render: logs whether `#spell-launcher-palette` exists in DOM, its rect, parent, and visibility.
+
+Once we confirm rendering, v0.1.4 reverts these and resumes proper Token-HUD-positioned frameless layout.
+
 ## [0.1.2] — 2026-05-14
 
 ### Fixed — Token HUD button now visible + click handler diagnosed

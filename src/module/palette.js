@@ -8,12 +8,16 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     id: 'spell-launcher-palette',
     classes: ['spell-launcher-palette'],
     tag: 'div',
+    // v0.1.3 DIAGNOSTIC: frame: true gives the palette window chrome
+    // (title bar + close button) so we can confirm rendering visually.
+    // Will switch back to frame: false once positioning is verified.
     window: {
-      frame: false,
+      frame: true,
+      title: 'Spells',
       positioned: true
     },
     position: {
-      width: 'auto',
+      width: 360,
       height: 'auto'
     }
   };
@@ -61,18 +65,22 @@ export async function togglePalette(position) {
   console.log(`[${MODULE_ID}] togglePalette`, { position, hadInstance: !!_instance?.rendered });
   if (_instance?.rendered) {
     await _instance.close();
+    _instance = null;
     return;
   }
   _instance = new SpellPalette();
-  // V13 ApplicationV2: pass position via render options so the layout is
-  // applied during the same frame as the initial render. Manual setPosition()
-  // after render() crashes if the element hasn't attached to DOM yet
-  // (offsetWidth read on null), which was the bug in v0.1.0.
-  const renderOpts = { force: true };
-  if (position && (Number.isFinite(position.left) || Number.isFinite(position.top))) {
-    renderOpts.position = {};
-    if (Number.isFinite(position.left)) renderOpts.position.left = Math.max(8, position.left);
-    if (Number.isFinite(position.top)) renderOpts.position.top = Math.max(8, position.top);
-  }
+  // v0.1.3 DIAGNOSTIC: ignore caller position, force center-screen so we
+  // can verify rendering works independent of token-HUD positioning.
+  const renderOpts = { force: true, position: { left: 300, top: 300 } };
   await _instance.render(renderOpts);
+  // Diagnostic: confirm the element is in DOM after render
+  await new Promise(r => setTimeout(r, 50));
+  const el = document.querySelector('#spell-launcher-palette');
+  console.log(`[${MODULE_ID}] palette DOM after render:`, el ? {
+    exists: true,
+    rect: el.getBoundingClientRect(),
+    classes: el.className,
+    parent: el.parentElement?.tagName,
+    visible: el.offsetParent !== null
+  } : { exists: false });
 }
