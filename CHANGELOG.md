@@ -2,6 +2,16 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.2.2] — 2026-05-14
+
+### Fixed — CSS cache hell (versioned stylesheet filename)
+
+v0.2.0 + v0.2.1 shipped new CSS but the file path stayed `src/styles/spell-launcher.css` between releases. Browser/HTTP/Electron caches happily served the old CSS, so the new `.unmapped`-styling and forced grid-width never reached the client even after Foundry reload. JS works (versioned bundle filename) but CSS didn't get the same treatment.
+
+**Fix:** `sync-manifest.mjs` now copies `src/styles/spell-launcher.css` to `dist/spell-launcher-v{version}.css` on every build and updates `module.json` `styles` accordingly. Same pattern as the JS bundle — unique URL per release, no cache layer can serve stale.
+
+This is the second time the same lesson has bitten us; the `foundry-table-mode` learnings document this for JS only — the same versioning needs to apply to CSS when stylesheet content changes meaningfully between releases.
+
 ## [0.2.1] — 2026-05-14
 
 ### Fixed — Visual gaps in v0.2.0 palette
