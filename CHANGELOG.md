@@ -2,6 +2,14 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.1.2] — 2026-05-14
+
+### Fixed — Token HUD button now visible + click handler diagnosed
+
+- **Icon swap:** `fa-hat-wizard` is FontAwesome Pro and renders as an empty box on most Foundry installs. Replaced with `fa-magic` (FA Free, bundled with Foundry V13). The button is now visible.
+- **stopImmediatePropagation** added to the click handler so the Token HUD's parent click handlers cannot intercept after our handler runs. Was reported in v0.1.1 prod-test that clicking the button "opened chat" — almost certainly a parent-element bubble issue.
+- **Diagnostic logs** added: `[foundry-spell-launcher] token-HUD button clicked` on click, `[foundry-spell-launcher] togglePalette` on each open/close. Lets the next bug-hunt round confirm whether click fires before render.
+
 ## [0.1.1] — 2026-05-14
 
 ### Changed — Trigger moved from scene controls to Token HUD

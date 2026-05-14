@@ -20,14 +20,22 @@ export function onRenderTokenHUD(hud, htmlOrJq) {
   const tooltip = game.i18n.localize('SPELL_LAUNCHER.Controls.Open');
   const button = document.createElement('button');
   button.type = 'button';
+  // fa-magic is in FontAwesome Free (Foundry's bundled set). fa-hat-wizard
+  // is Pro-only — was invisible on most installs in v0.1.1.
   button.className = 'control-icon spell-launcher-token-button';
   button.dataset.tooltip = tooltip;
-  button.innerHTML = '<i class="fas fa-hat-wizard"></i>';
+  button.innerHTML = '<i class="fas fa-magic"></i>';
   button.addEventListener('click', async (event) => {
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
+    console.log(`[${MODULE_ID}] token-HUD button clicked`);
     const rect = button.getBoundingClientRect();
-    await togglePalette({ left: rect.right + 8, top: rect.top });
+    try {
+      await togglePalette({ left: rect.right + 8, top: rect.top });
+    } catch (e) {
+      console.error(`[${MODULE_ID}] togglePalette error`, e);
+    }
   });
 
   const rightCol = root.querySelector('.col.right') ?? root.querySelector('[class*="right"]') ?? root;

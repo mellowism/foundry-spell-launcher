@@ -58,6 +58,7 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
  *   the palette appears next to it, mirroring the Assign Status Effects flow.
  */
 export async function togglePalette(position) {
+  console.log(`[${MODULE_ID}] togglePalette`, { position, hadInstance: !!_instance?.rendered });
   if (_instance?.rendered) {
     await _instance.close();
     return;
