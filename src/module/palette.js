@@ -53,8 +53,13 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     id: 'spell-launcher-palette',
     classes: ['spell-launcher-palette'],
     tag: 'div',
+    // frame: true was the only config that rendered reliably across V13 +
+    // dnd5e 5.x in prod testing. Frameless (window.frame: false) with
+    // width: 'auto' produced a zero-size or DOM-detached state — no visible
+    // palette. Keeping the title-bar frame is intentional UX: gives the GM
+    // a clear "Spells — [actor]" header.
     window: {
-      frame: false,
+      frame: true,
       positioned: true
     },
     position: {
@@ -64,9 +69,17 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
   };
 
   constructor(options = {}) {
-    super(options);
-    this._token = options.token ?? null;
-    this._data = buildActorSpellList(this._token);
+    // Set the window title to include the actor name so the palette is
+    // clearly identified when multiple windows are open.
+    const token = options.token ?? null;
+    const data = buildActorSpellList(token);
+    const titleSuffix = data.actorName ? ` — ${data.actorName}` : '';
+    super({
+      ...options,
+      window: { ...(options.window ?? {}), title: `Spells${titleSuffix}` }
+    });
+    this._token = token;
+    this._data = data;
   }
 
   async _renderHTML() {
@@ -90,7 +103,7 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
       </div>`;
     }).join('');
 
-    return `<div class="palette-shell"><div class="palette-actor">${this._data.actorName}</div>${groupsHtml}</div>`;
+    return `<div class="palette-shell">${groupsHtml}</div>`;
   }
 
   async _replaceHTML(html, content) {

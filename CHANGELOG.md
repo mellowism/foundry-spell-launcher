@@ -2,6 +2,19 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.1.5] — 2026-05-14
+
+### Fixed — Palette frame is back (frame: false was the silent-fail cause)
+
+v0.1.4 reverted to `window.frame: false` for "borderless popup" aesthetics. In V13 + dnd5e 5.x, ApplicationV2 with `frame: false` + `width: 'auto'` rendered to a detached or zero-size state — no visible palette. v0.1.3 had worked because `frame: true` gave the window a managed-size frame; reverting the frame ALSO reverted the rendering.
+
+Lesson committed: in this ecosystem, frameless ApplicationV2 popups aren't viable without explicit pixel-sized position config. Title-bar frame is the working pattern.
+
+**Title is now actor-aware:** `Spells — Balbor Darkmore` etc. Makes multi-window state clear.
+
+### Removed
+- Redundant in-palette `<div class="palette-actor">` actor-name header. The window title now carries that info, so the body is cleaner.
+
 ## [0.1.4] — 2026-05-14
 
 ### Changed — Per-actor spell list grouped by level
