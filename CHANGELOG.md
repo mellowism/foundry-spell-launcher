@@ -2,6 +2,24 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.3.1] — 2026-05-14
+
+### Added — Auto-map on palette open (no button needed)
+
+Auto-map now runs silently every time the palette opens. Library mappings are added in the background for any of the actor's spells that don't yet have one. Idempotent — existing mappings are never touched. The "Auto-map" button stays as an explicit re-run option.
+
+**Risk discussion:** If a user explicitly removes a mapping via the configure dialog, re-opening the palette will re-add it. This is an edge case — for now we accept it. v0.4+ may track a "deliberately unmapped" set if it becomes annoying.
+
+### Added — Right-click any spell to edit mapping
+
+Right-click on a spell icon (mapped or unmapped) → opens the configure dialog directly. Left-click on mapped still casts. Lets you fix wrong auto-mappings without a roundabout flow.
+
+### Added — Clear effects button
+
+Palette header now has a "Clear effects" (broom icon, red-ish) button that ends ALL persistent Sequencer effects spawned by this module on the current scene. Useful for stuck Moonbeams, Hunter's Mark runes, Entangle vines, etc. that you can't easily click-to-remove.
+
+The clear targets only effects whose Sequencer name starts with `foundry-spell-launcher::` — does not touch effects from other modules (Sequencer, JB2A, Automated Animations, ...).
+
 ## [0.3.0] — 2026-05-14
 
 ### Added — Auto-map (Sequencer DB + dnd5e metadata)

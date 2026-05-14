@@ -4,6 +4,31 @@ import { openConfigureDialog } from './configure-dialog.js';
 import { effectiveSpellLevel, isPactMagic } from './dnd5e-compat.js';
 import { autoMapActorSpells } from './auto-map.js';
 
+const PERSIST_PREFIX = `${MODULE_ID}::`;
+
+async function clearAllPersistentEffects() {
+  try {
+    const mgr = Sequencer?.EffectManager;
+    if (!mgr) {
+      ui.notifications.warn('Sequencer EffectManager unavailable');
+      return 0;
+    }
+    const all = mgr.getEffects?.() ?? [];
+    const ours = all.filter(e => {
+      const n = e?.data?.name ?? e?.name ?? '';
+      return String(n).startsWith(PERSIST_PREFIX);
+    });
+    for (const e of ours) {
+      const n = e?.data?.name ?? e?.name;
+      if (n) await mgr.endEffects({ name: n });
+    }
+    return ours.length;
+  } catch (err) {
+    console.error(`[${MODULE_ID}] clearAllPersistentEffects`, err);
+    return 0;
+  }
+}
+
 let _instance = null;
 
 function buildActorSpellList(token) {
@@ -82,13 +107,26 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
     });
     this._token = token;
     this._data = data;
-    const library = getSpellLibrary();
-    console.log('[foundry-spell-launcher] palette render', {
-      libraryKeys: Object.keys(library),
-      actor: data.actorName,
-      spellCount: data.groups.reduce((acc, g) => acc + g.spells.length, 0),
-      mappedCount: data.groups.reduce((acc, g) => acc + g.spells.filter(s => s.mapped).length, 0)
-    });
+  }
+
+  /**
+   * Run auto-map silently against this actor's unmapped spells, then rebuild
+   * the spell list so the render reflects new mappings. Idempotent — only
+   * adds mappings for spells that have no library entry.
+   */
+  async _autoMapOnOpen() {
+    const actor = this._token?.actor;
+    if (!actor) return;
+    try {
+      const result = await autoMapActorSpells(actor);
+      if (result.mapped.length > 0) {
+        console.log(`[${MODULE_ID}] auto-map on open: +${result.mapped.length} mapped, ${result.skipped.length} skipped`, result);
+        // Rebuild data with new library state
+        this._data = buildActorSpellList(this._token);
+      }
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] auto-map on open failed`, e);
+    }
   }
 
   _refresh() {
@@ -106,14 +144,20 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
 
     const totalSpells = this._data.groups.reduce((a, g) => a + g.spells.length, 0);
     const unmappedCount = this._data.groups.reduce((a, g) => a + g.spells.filter(s => !s.mapped).length, 0);
-    const headerHtml = unmappedCount > 0
-      ? `<div class="palette-header">
-           <span class="palette-stats">${unmappedCount} of ${totalSpells} unmapped</span>
-           <button type="button" class="palette-automap" data-tooltip="Auto-map all unmapped spells using Sequencer/JB2A database">
-             <i class="fas fa-magic"></i> Auto-map all
-           </button>
-         </div>`
-      : `<div class="palette-header"><span class="palette-stats all-mapped">All ${totalSpells} spells mapped ✓</span></div>`;
+    const statsHtml = unmappedCount > 0
+      ? `<span class="palette-stats">${unmappedCount} of ${totalSpells} unmapped</span>`
+      : `<span class="palette-stats all-mapped">All ${totalSpells} spells mapped ✓</span>`;
+    const headerHtml = `<div class="palette-header">
+      ${statsHtml}
+      <div class="palette-header-actions">
+        ${unmappedCount > 0 ? `<button type="button" class="palette-automap" data-tooltip="Auto-map all unmapped spells using Sequencer/JB2A database">
+          <i class="fas fa-magic"></i> Auto-map
+        </button>` : ''}
+        <button type="button" class="palette-clear-effects" data-tooltip="Remove all persistent spell effects (Moonbeam, Hunter's Mark, Entangle, etc.) currently on the scene">
+          <i class="fas fa-broom"></i> Clear effects
+        </button>
+      </div>
+    </div>`;
 
     const groupsHtml = this._data.groups.map(group => {
       const cells = group.spells.map(s => {
@@ -135,6 +179,13 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
 
   async _replaceHTML(html, content) {
     content.innerHTML = html;
+
+    content.querySelector('.palette-clear-effects')?.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const count = await clearAllPersistentEffects();
+      ui.notifications.info(`Cleared ${count} persistent effect(s).`);
+    });
 
     content.querySelector('.palette-automap')?.addEventListener('click', async (ev) => {
       ev.preventDefault();
@@ -180,6 +231,17 @@ export class SpellPalette extends foundry.applications.api.ApplicationV2 {
           });
         }
       });
+      // Right-click on any spell (mapped or unmapped) → edit mapping
+      btn.addEventListener('contextmenu', async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const name = btn.dataset.spellName;
+        if (!name) return;
+        openConfigureDialog(name, {
+          actor: this._token?.actor ?? null,
+          onSaved: () => this._refresh()
+        });
+      });
     });
   }
 }
@@ -192,6 +254,10 @@ export async function togglePalette({ position, token } = {}) {
     return;
   }
   _instance = new SpellPalette({ token });
+  // Auto-map silently before render so the palette opens with everything
+  // already mapped that we know how to map. Idempotent — touches only
+  // spells with no library entry.
+  await _instance._autoMapOnOpen();
   const renderOpts = { force: true };
   if (position && (Number.isFinite(position.left) || Number.isFinite(position.top))) {
     renderOpts.position = {};
