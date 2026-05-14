@@ -2,6 +2,20 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.8] — 2026-05-14
+
+### Fixed — Template placement: race three resolution sources
+
+v0.4.7 only listened to the `createMeasuredTemplate` hook, but on Carl's install neither the hook nor `drawPreview()`'s return value resolved after placement — so the promise hung until the 60s timeout.
+
+v0.4.8 races three sources, first non-null wins:
+
+1. **`drawPreview()` return value** — some dnd5e versions resolve directly to the placed document
+2. **`createMeasuredTemplate` hook** — V13 + some dnd5e versions
+3. **`createRegion` hook** — V13 routes some AoE spells through Region documents instead of MeasuredTemplate (Automated Animations explicitly hooks createRegion for this reason)
+
+All three are wired with cleanup so the unused listeners don't leak. Each resolution path logs which source captured the placement.
+
 ## [0.4.7] — 2026-05-14
 
 ### Fixed — Template placement captured via createMeasuredTemplate hook

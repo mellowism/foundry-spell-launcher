@@ -100,61 +100,60 @@ async function previewSpellTemplate(actor, spellName) {
       hasDraw: typeof tpl.draw === 'function'
     });
 
-    // dnd5e 5.x / Foundry V13: the preview method may not reliably return
-    // the placed template document — it's an interactive UI flow. Capture
-    // the placed template via the createMeasuredTemplate hook instead.
-    // This is the pattern Automated Animations uses (see traffic-cop.js
-    // — it does the same for Regions in V13). Resolves on first creation
-    // OR on a timeout (user pressed Escape / right-clicked to cancel).
+    // Race three resolution sources:
+    //   1. drawPreview()'s return value (some dnd5e versions return the doc)
+    //   2. createMeasuredTemplate hook (V13 + some dnd5e versions)
+    //   3. createRegion hook (V13 AoE spells routed to Regions)
+    // Plus a 60s timeout fallback. First non-null wins, others are aborted.
     const placed = await new Promise((resolve) => {
-      let hookId = null;
       let resolved = false;
-      const timeoutMs = 60_000; // 1-minute cap
+      const hookIds = [];
       const cleanup = () => {
-        if (hookId !== null) try { Hooks.off('createMeasuredTemplate', hookId); } catch (_) {}
+        for (const { name, id } of hookIds) {
+          try { Hooks.off(name, id); } catch (_) {}
+        }
+      };
+      const finish = (doc, source) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        clearTimeout(timer);
+        console.log(`[${MODULE_ID}] template captured via ${source}`, { docId: doc?.id });
+        resolve(doc);
       };
       const timer = setTimeout(() => {
         if (resolved) return;
         resolved = true;
         cleanup();
-        console.log(`[${MODULE_ID}] template preview timed out`);
+        console.log(`[${MODULE_ID}] template preview timed out (60s)`);
         resolve(null);
-      }, timeoutMs);
+      }, 60_000);
 
-      hookId = Hooks.on('createMeasuredTemplate', (doc) => {
-        if (resolved) return;
+      hookIds.push({ name: 'createMeasuredTemplate', id: Hooks.on('createMeasuredTemplate', (doc) => finish(doc, 'createMeasuredTemplate')) });
+      hookIds.push({ name: 'createRegion',          id: Hooks.on('createRegion',          (doc) => finish(doc, 'createRegion')) });
+
+      const fn = tpl.drawPreview ?? tpl.place ?? tpl.activate;
+      if (typeof fn !== 'function') {
         resolved = true;
-        clearTimeout(timer);
         cleanup();
-        resolve(doc);
-      });
-
-      // Kick off the preview UI. The method may return immediately or after
-      // placement — we don't care, the hook is our ground truth.
-      try {
-        const fn = tpl.drawPreview ?? tpl.place ?? tpl.activate;
-        if (typeof fn !== 'function') {
-          resolved = true;
-          clearTimeout(timer);
-          cleanup();
-          console.warn(`[${MODULE_ID}] template instance has no known preview method`);
-          resolve(null);
-          return;
-        }
-        Promise.resolve(fn.call(tpl)).catch((e) => {
-          console.warn(`[${MODULE_ID}] preview method threw`, e);
-          // Don't resolve yet — user may still place via UI even if the
-          // wrapper promise rejected. Let the hook or timeout decide.
-        });
-      } catch (e) {
-        console.warn(`[${MODULE_ID}] preview method call failed`, e);
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          cleanup();
-          resolve(null);
-        }
+        clearTimeout(timer);
+        console.warn(`[${MODULE_ID}] template instance has no known preview method`);
+        resolve(null);
+        return;
       }
+
+      // Race: drawPreview() may itself resolve to the placed doc
+      Promise.resolve(fn.call(tpl)).then((result) => {
+        if (resolved) return;
+        if (result && (Array.isArray(result) ? result.length : true)) {
+          const doc = Array.isArray(result) ? result[0] : result;
+          finish(doc, 'drawPreview-return');
+        } else {
+          console.log(`[${MODULE_ID}] drawPreview resolved to ${result} — still awaiting hooks`);
+        }
+      }).catch((e) => {
+        console.warn(`[${MODULE_ID}] preview method threw`, e);
+      });
     });
 
     if (!placed) {
