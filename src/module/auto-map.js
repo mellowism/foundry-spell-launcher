@@ -15,6 +15,15 @@ import { MODULE_ID, setSpellMapping, getSpellLibrary } from './settings.js';
 export function inferKindFromSpell(item) {
   const system = item?.system ?? {};
   const range = system.range;
+  const name = String(item?.name ?? '').toLowerCase();
+
+  // Name-based override takes precedence — some spells have visual conventions
+  // that don't follow dnd5e metadata cleanly (Misty Step = self target +
+  // movement, but visually we want teleport-kind).
+  if (NAME_KIND_OVERRIDES[name]) {
+    console.log(`[${MODULE_ID}] inferKind`, { name: item?.name, source: 'name-override', resolved: NAME_KIND_OVERRIDES[name] });
+    return NAME_KIND_OVERRIDES[name];
+  }
 
   // Schema shift in dnd5e 5.x: AoE shape moved from system.target.type to
   // system.target.template.type. Affects (creature/enemy/ally) lives on
@@ -30,7 +39,6 @@ export function inferKindFromSpell(item) {
   ).toLowerCase();
   const targetType = templateType || affectsType;
 
-  // Diagnostic log so future schema shifts are easier to track.
   console.log(`[${MODULE_ID}] inferKind`, {
     name: item?.name,
     templateType,
@@ -74,12 +82,50 @@ function toSnake(name) {
  * Used to prefer kind-appropriate variants when multiple paths match a name.
  */
 const KIND_KEYWORDS = {
-  cone: ['cone', 'fire_cone', 'flame_cone', '.cone.'],
-  range: ['projectile', 'ray', 'bolt', 'missile', 'breath'],
-  marker: ['rune', 'circle', 'mark', 'symbol', 'persistent', 'loop', 'target', 'pentagram', 'magic_signs'],
-  teleport: ['poof', 'portal', 'teleport', 'misty_step', 'door'],
-  melee: ['melee', 'touch', 'strike', 'smite', 'cure_wounds', 'inflict', 'healing.generic'],
-  self: ['self', 'aura', 'shield_spell', 'bless', 'mage_armor', 'buff', 'on_token']
+  cone: ['.cone.', 'cone', 'fire_cone', 'flame_cone'],
+  range: ['.projectile.', '.cast.', 'projectile', 'ray', 'bolt', 'missile', 'breath'],
+  marker: ['.loop.', '.target.loop.', 'rune', 'pentagram', 'magic_signs.rune', '_loop'],
+  teleport: ['.poof.', 'poof', 'portal', 'misty_step', 'door'],
+  melee: ['.target.', '400px', 'healing.generic', '.complete.', 'cure_wounds.400px'],
+  self: ['.target.', '.aura.', '.loop.', '400px', 'bless.400px', 'shield_spell', 'mage_armor']
+};
+
+/**
+ * Paths to AVOID per kind. JB2A often ships multiple animation phases per
+ * spell (intro/loop/outro, cast/projectile/complete). For persistent
+ * (marker), buff (self), on-target (melee) kinds we want the loop/target
+ * phases; the directional cast/projectile/intro phases tend to render
+ * "between caster and target" which is wrong for these kinds.
+ */
+const KIND_BLOCK = {
+  marker: ['.intro.', '.outro.', '.cast.', '.projectile.', '.complete_animation.', '.hit.'],
+  melee: ['.intro.', '.projectile.', '.cast.', '.outro.', '.loop.'],
+  self: ['.intro.', '.projectile.', '.outro.', '.cast.'],
+  cone: ['.target.', '.complete.', '.hit.', '.loop.'],
+  range: ['.loop.', '.idle.', '.persist.', '.outro.'],
+  teleport: ['.loop.', '.idle.', '.persist.']
+};
+
+/**
+ * Some spells have well-known mechanical/visual conventions that don't map
+ * cleanly from raw dnd5e metadata. Override the inferred kind by spell name.
+ * Keys are lowercased exact spell names.
+ */
+const NAME_KIND_OVERRIDES = {
+  "misty step": 'teleport',
+  "dimension door": 'teleport',
+  "thunder step": 'teleport',
+  "word of recall": 'teleport',
+  "blink": 'teleport',
+  "moonbeam": 'marker',
+  "spirit guardians": 'self',
+  "spiritual weapon": 'marker',
+  "spike growth": 'marker',
+  "darkness": 'marker',
+  "fog cloud": 'marker',
+  "wall of fire": 'marker',
+  "entangle": 'marker',
+  "hunger of hadar": 'marker'
 };
 
 /**
@@ -117,20 +163,40 @@ export function findJB2APath(spellName, kindHint = null) {
   const allCandidates = [...exactMatches, ...containsMatches];
   if (!allCandidates.length) return null;
 
-  // Kind-hint preference: filter to candidates whose path contains a keyword
-  // appropriate for the kind. Only narrow if at least one survives.
   let pool = allCandidates;
+
+  // Block-list: remove kind-inappropriate variants (e.g. for marker kind,
+  // exclude intro/projectile/cast assets that render directionally).
+  if (kindHint && KIND_BLOCK[kindHint]) {
+    const blocks = KIND_BLOCK[kindHint];
+    const filtered = pool.filter(p => {
+      const low = p.toLowerCase();
+      return !blocks.some(b => low.includes(b));
+    });
+    // Only apply block list if we don't end up with nothing.
+    if (filtered.length) pool = filtered;
+  }
+
+  // Kind-keyword preference: of remaining candidates, prefer ones that match
+  // kind-appropriate keywords.
   if (kindHint && KIND_KEYWORDS[kindHint]) {
     const keywords = KIND_KEYWORDS[kindHint];
-    const preferred = allCandidates.filter(p => {
+    const preferred = pool.filter(p => {
       const low = p.toLowerCase();
       return keywords.some(kw => low.includes(kw));
     });
     if (preferred.length) pool = preferred;
   }
 
-  // Shortest path within the chosen pool — usually the simplest variant alias
-  return pool.sort((a, b) => a.length - b.length)[0];
+  const chosen = pool.sort((a, b) => a.length - b.length)[0];
+  console.log(`[${MODULE_ID}] findJB2APath`, {
+    spell: spellName,
+    kind: kindHint,
+    chosen,
+    candidatesCount: allCandidates.length,
+    poolCount: pool.length
+  });
+  return chosen;
 }
 
 /**

@@ -2,6 +2,38 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.1] — 2026-05-14
+
+### Fixed — Asset selection now blocks directional variants for static kinds
+
+Root cause for "Hunter's Mark / Bless / Spiritual Weapon render between caster and target": auto-map's keyword preference matched the **directional** JB2A variant (intro/projectile/cast phases) rather than the **static** variant (loop/target phases).
+
+JB2A typically ships multiple phases per spell, e.g.:
+- `jb2a.bless.400px.intro.bluegold` (directional intro)
+- `jb2a.bless.400px.loop.bluegold` (static overlay) ← what we want
+- `jb2a.bless.400px.outro.bluegold` (fadeout)
+
+**Added `KIND_BLOCK` per kind:** marker / melee / self / cone / range / teleport each have a list of substrings that should NOT appear in chosen paths. Block filtering runs before keyword preference. Falls back to unblocked pool if all candidates are blocked.
+
+**Improved `KIND_KEYWORDS`:** more precise patterns — markers prefer `.loop.`, melee prefers `.target.` and `400px`, etc.
+
+### Added — Name-based kind overrides
+
+Some spells have visual conventions that don't follow dnd5e metadata cleanly. Hard-coded overrides in `NAME_KIND_OVERRIDES`:
+
+| Spell name | Forced kind |
+|---|---|
+| Misty Step, Dimension Door, Thunder Step, Word of Recall, Blink | teleport |
+| Moonbeam, Spike Growth, Darkness, Fog Cloud, Wall of Fire, Entangle, Hunger of Hadar | marker |
+| Spirit Guardians | self |
+| Spiritual Weapon | marker |
+
+Misty Step previously auto-detected as `self` (because dnd5e marks it as self-target). Now correctly snaps to `teleport`.
+
+### Added — findJB2APath logs chosen path
+
+`[foundry-spell-launcher] findJB2APath { spell, kind, chosen, candidatesCount, poolCount }` logs to console on every auto-map. Lets you diagnose mismatches without code spelunking — paste the log if a spell still picks the wrong asset.
+
 ## [0.4.0] — 2026-05-14
 
 ### Added — Two new kinds: `melee` and `self`
