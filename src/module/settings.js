@@ -15,7 +15,7 @@ export const DEFAULT_LIBRARY = {
   'Eldritch Blast':  { kind: 'range', file: 'jb2a.eldritch_blast.purple' }
 };
 
-export const SPELL_KINDS = ['range', 'cone', 'marker', 'teleport'];
+export const SPELL_KINDS = ['range', 'cone', 'marker', 'teleport', 'melee', 'self'];
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.SPELL_LIBRARY, {

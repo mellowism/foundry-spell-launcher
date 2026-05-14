@@ -26,8 +26,21 @@ export async function castSpell(name, opts = {}) {
   if (!ensureSequencer()) return;
 
   const source = opts.token ?? canvas.tokens.controlled[0];
+  // Marker spells can be cast without a caster (Moonbeam doesn't need source).
+  // Self / melee / cone / range / teleport all need a caster.
   if (spell.kind !== 'marker' && !source) {
     ui.notifications.warn(game.i18n.localize('SPELL_LAUNCHER.Palette.SelectCaster'));
+    return;
+  }
+
+  // Self-kind: animation on caster, no crosshair needed
+  if (spell.kind === 'self') {
+    await new Sequence()
+      .effect()
+        .file(spell.file)
+        .attachTo(source)
+        .scaleToObject(1.5)
+      .play();
     return;
   }
 
@@ -42,14 +55,41 @@ export async function castSpell(name, opts = {}) {
   }
   if (!crosshairResult) return;
 
+  // Resolve crosshair-token if click landed on one
+  const crosshairToken = crosshairResult?.id
+    ? canvas.tokens.get(crosshairResult.id)
+    : null;
+
   switch (spell.kind) {
     case 'range':
       await new Sequence()
         .effect()
           .file(spell.file)
           .atLocation(source)
-          .stretchTo(crosshairResult)
+          .stretchTo(crosshairToken ?? crosshairResult)
         .play();
+      return;
+
+    case 'melee':
+      // Touch / on-target spells (Cure Wounds, Shocking Grasp). Plays on the
+      // target token if the crosshair hit one; falls back to the clicked
+      // location otherwise. Uses attachTo so the effect follows the target
+      // if it moves during play.
+      if (crosshairToken) {
+        await new Sequence()
+          .effect()
+            .file(spell.file)
+            .attachTo(crosshairToken)
+            .scaleToObject(1.5)
+          .play();
+      } else {
+        await new Sequence()
+          .effect()
+            .file(spell.file)
+            .atLocation(crosshairResult)
+            .scaleToObject(1.5)
+          .play();
+      }
       return;
 
     case 'cone':
@@ -68,27 +108,36 @@ export async function castSpell(name, opts = {}) {
       return;
 
     case 'marker': {
-      const id = crosshairResult.id
+      // If crosshair hit a token, attach the marker to the token so it
+      // follows when moved (Hunter's Mark on a fleeing enemy). Otherwise
+      // anchor at the clicked location (Moonbeam, Entangle).
+      const anchorId = crosshairToken?.id
         ?? `${Math.round(crosshairResult.x ?? 0)},${Math.round(crosshairResult.y ?? 0)}`;
-      const seqName = `${PERSIST_PREFIX}${name}::${id}`;
+      const seqName = `${PERSIST_PREFIX}${name}::${anchorId}`;
       const existing = Sequencer.EffectManager.getEffects({ name: seqName });
       if (existing.length) {
         await Sequencer.EffectManager.endEffects({ name: seqName });
         ui.notifications.info(game.i18n.format('SPELL_LAUNCHER.Notifications.MarkerRemoved', { name }));
         return;
       }
-      await new Sequence()
+      const seq = new Sequence()
         .effect()
           .name(seqName)
           .file(spell.file)
-          .atLocation(crosshairResult)
           .scaleToObject(1.5)
-          .persist()
-        .play();
+          .persist();
+      if (crosshairToken) {
+        seq.attachTo(crosshairToken);
+      } else {
+        seq.atLocation(crosshairResult);
+      }
+      await seq.play();
       return;
     }
 
-    case 'teleport':
+    case 'teleport': {
+      // Play poof at source, poof at destination, then actually move the
+      // caster token to the click point. Snap to grid so token aligns.
       await new Sequence()
         .effect()
           .file(spell.file)
@@ -100,7 +149,25 @@ export async function castSpell(name, opts = {}) {
           .scaleToObject(1.5)
           .delay(150)
         .play();
+      // Move token after animation starts. Snap to grid.
+      try {
+        const gridSize = canvas?.dimensions?.size ?? 100;
+        const tw = source?.document?.width ?? 1;
+        const th = source?.document?.height ?? 1;
+        const offsetX = (tw * gridSize) / 2;
+        const offsetY = (th * gridSize) / 2;
+        // crosshairResult.x/y are the center coords; convert to top-left
+        const targetX = Math.round((crosshairResult.x - offsetX) / gridSize) * gridSize;
+        const targetY = Math.round((crosshairResult.y - offsetY) / gridSize) * gridSize;
+        await source.document.update(
+          { x: targetX, y: targetY },
+          { animation: { duration: 0 } }
+        );
+      } catch (e) {
+        console.warn(`[${MODULE_ID}] teleport: token move failed`, e);
+      }
       return;
+    }
 
     default:
       console.warn(`[${MODULE_ID}] Unknown spell kind: ${spell.kind}`);

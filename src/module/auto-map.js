@@ -40,13 +40,17 @@ export function inferKindFromSpell(item) {
 
   if (targetType === 'cone') return 'cone';
   if (['sphere', 'cube', 'cylinder', 'radius', 'square', 'circle'].includes(targetType)) return 'marker';
-  if (targetType === 'self') return 'marker';
+  if (targetType === 'self') return 'self';
   if (targetType === 'line' || targetType === 'wall') return 'range';
   if (['creature', 'enemy', 'ally', 'object', 'space'].includes(targetType)) {
     const units = String(range?.units ?? '').toLowerCase();
-    if (units === 'touch') return 'range';
+    if (units === 'touch' || units === 'self') return 'melee';
     return 'range';
   }
+  // Touch units on a spell without a clear target type → melee
+  const units = String(range?.units ?? '').toLowerCase();
+  if (units === 'touch') return 'melee';
+  if (units === 'self') return 'self';
   return 'range';
 }
 
@@ -73,7 +77,9 @@ const KIND_KEYWORDS = {
   cone: ['cone', 'fire_cone', 'flame_cone', '.cone.'],
   range: ['projectile', 'ray', 'bolt', 'missile', 'breath'],
   marker: ['rune', 'circle', 'mark', 'symbol', 'persistent', 'loop', 'target', 'pentagram', 'magic_signs'],
-  teleport: ['poof', 'portal', 'teleport', 'misty_step', 'door']
+  teleport: ['poof', 'portal', 'teleport', 'misty_step', 'door'],
+  melee: ['melee', 'touch', 'strike', 'smite', 'cure_wounds', 'inflict', 'healing.generic'],
+  self: ['self', 'aura', 'shield_spell', 'bless', 'mage_armor', 'buff', 'on_token']
 };
 
 /**

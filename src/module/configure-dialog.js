@@ -58,8 +58,10 @@ export class SpellConfigureDialog extends foundry.applications.api.ApplicationV2
         <div class="cfg-hint">
           <strong>range</strong> = projectile (Fire Bolt) ·
           <strong>cone</strong> = cone from caster (Burning Hands) ·
-          <strong>marker</strong> = persistent rune on target (Hunter's Mark, Moonbeam) ·
-          <strong>teleport</strong> = poof at caster + destination (Misty Step)
+          <strong>marker</strong> = persistent rune on target/location (Hunter's Mark, Moonbeam, Entangle) ·
+          <strong>teleport</strong> = poof + move caster (Misty Step) ·
+          <strong>melee</strong> = on target token (Cure Wounds, Shocking Grasp) ·
+          <strong>self</strong> = on caster, no click target (Bless, Mage Armor)
         </div>
       </div>
       <div class="cfg-row">

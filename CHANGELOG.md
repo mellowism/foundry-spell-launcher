@@ -2,6 +2,45 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.0] — 2026-05-14
+
+### Added — Two new kinds: `melee` and `self`
+
+**`melee`** — touch / on-target spells. Animation plays attached to the clicked target token (so it follows if the token moves). Examples: Cure Wounds, Shocking Grasp, Inflict Wounds, weapon-as-spell touch attacks. If the click lands on empty canvas, falls back to that location.
+
+**`self`** — buff spells that animate on the caster. **No crosshair shown** — the spell fires immediately on the controlled token. Examples: Bless, Mage Armor, Shield, Armor of Agathys.
+
+`inferKindFromSpell` updated:
+- `range.units === 'touch'` → `melee`
+- `target.affects.type === 'self'` OR `range.units === 'self'` → `self`
+
+`KIND_KEYWORDS` extended so auto-map prefers melee-flavored paths (`touch`, `strike`, `cure_wounds`, `healing.generic`) for melee kind, and self-flavored paths (`bless`, `mage_armor`, `shield_spell`) for self kind.
+
+### Fixed — Marker now attaches to clicked tokens
+
+Previously `marker` placed effects at the raw `x,y` of the crosshair click — even when the click landed on a token. Hunter's Mark on a moving enemy stayed at the original square instead of following.
+
+**Fix:** when the crosshair hit a token, marker now uses `attachTo(token)` instead of `atLocation(x,y)`. The rune follows the token. Location-anchored placements (Moonbeam, Entangle on empty squares) still use `atLocation`.
+
+### Fixed — Teleport actually moves the caster
+
+Previously `teleport` played two poofs (at source + destination) but did not move the caster token. Now after the animation starts, the caster token's position is updated to the click point (grid-snapped).
+
+### Fixed — Range now strictly between source and target token
+
+When the crosshair hit a token, `range` (stretch) now uses the token as the destination explicitly. This corrects edge cases where the click coordinates were inside the token but the stretch terminated short.
+
+### Reference — kind selection logic
+
+| Kind | Target | Animation behaviour | dnd5e auto-detect signal |
+|------|--------|---------------------|--------------------------|
+| range | projectile to a point/token | stretches caster→click | creature target, ranged |
+| cone | directional fan | stretches caster→click | template.type = cone |
+| melee | on target | attached to clicked token | range.units = touch |
+| self | on caster | no crosshair, plays on caster | target = self |
+| marker | persistent on target/location | attached to token if hit, else at point | sphere/cube/radius template |
+| teleport | move caster | poof+poof + actual token move | (configured manually) |
+
 ## [0.3.4] — 2026-05-14
 
 ### Changed — Cone uses stretchTo (AA-like directional cone)
