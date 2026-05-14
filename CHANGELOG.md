@@ -2,6 +2,18 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.6] — 2026-05-14
+
+### Fixed — Template preview tries multiple V13 method names
+
+v0.4.5 confirmed `AbilityTemplate.fromActivity` works in dnd5e 5.x and returns a template object — but the object lacks `drawPreview()`. That method was renamed/replaced in V13. v0.4.6 tries `drawPreview()`, then `place()`, then `activate()` in sequence.
+
+Also normalizes `fromActivity`'s return value: it can be a single instance or an array (one activity can spawn multiple templates). Picks the first.
+
+### Added — Template instance diagnostic log
+
+Logs `constructor.name`, all own methods, and all prototype methods of the template object returned by the factory. Lets us see exactly which API the current dnd5e+Foundry version exposes.
+
 ## [0.4.5] — 2026-05-14
 
 ### Fixed — Template preview tries dnd5e 5.x Activities model

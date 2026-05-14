@@ -79,9 +79,47 @@ async function previewSpellTemplate(actor, spellName) {
       return null;
     }
 
-    const placed = await template.drawPreview();
+    // fromActivity may return a single instance OR an array (one activity can
+    // spawn multiple templates). Normalize to an array.
+    const templates = Array.isArray(template) ? template : [template];
+    const tpl = templates[0];
+    if (!tpl) return null;
+
+    // Diagnostic — log methods/props on the template object so we can find
+    // the V13/dnd5e5.x equivalent of drawPreview if it's been renamed.
+    const ownMethods = Object.getOwnPropertyNames(tpl).filter(n => typeof tpl[n] === 'function');
+    const protoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(tpl) ?? {})
+      .filter(n => typeof tpl[n] === 'function');
+    console.log(`[${MODULE_ID}] template instance`, {
+      constructor: tpl?.constructor?.name,
+      ownMethods,
+      protoMethods,
+      hasDrawPreview: typeof tpl.drawPreview === 'function',
+      hasPlace: typeof tpl.place === 'function',
+      hasActivate: typeof tpl.activate === 'function',
+      hasDraw: typeof tpl.draw === 'function'
+    });
+
+    // Try the known preview method names in order of likelihood.
+    let placed = null;
+    try {
+      if (typeof tpl.drawPreview === 'function') {
+        placed = await tpl.drawPreview();
+      } else if (typeof tpl.place === 'function') {
+        placed = await tpl.place();
+      } else if (typeof tpl.activate === 'function') {
+        placed = await tpl.activate();
+      } else {
+        console.warn(`[${MODULE_ID}] template instance has no known preview method`);
+        return null;
+      }
+    } catch (e) {
+      console.warn(`[${MODULE_ID}] template preview method threw`, e);
+      return null;
+    }
+
     if (!placed) {
-      console.log(`[${MODULE_ID}] drawPreview returned falsy (user cancelled?)`);
+      console.log(`[${MODULE_ID}] preview method returned falsy (user cancelled?)`);
       return null;
     }
     return Array.isArray(placed) ? placed[0] : placed;
