@@ -11,15 +11,36 @@ const PERSIST_PREFIX = `${MODULE_ID}::`;
  */
 async function previewSpellTemplate(actor, spellName) {
   try {
-    const AbilityTemplate = globalThis.dnd5e?.canvas?.AbilityTemplate;
+    // Try multiple known locations for dnd5e's AbilityTemplate across V13 +
+    // dnd5e 3.x/4.x/5.x. Verified by reading the theripper93/autoanimations
+    // V13 fork — they delegate template creation to the system, but the
+    // exposed API in current dnd5e is at game.dnd5e.canvas.AbilityTemplate
+    // (alias globalThis.dnd5e.canvas.AbilityTemplate).
+    const AbilityTemplate =
+      globalThis.dnd5e?.canvas?.AbilityTemplate
+      ?? game?.dnd5e?.canvas?.AbilityTemplate
+      ?? game?.system?.canvas?.AbilityTemplate
+      ?? CONFIG?.DND5E?.canvas?.AbilityTemplate
+      ?? null;
+    console.log(`[${MODULE_ID}] AbilityTemplate lookup`, {
+      globalThis_dnd5e: !!globalThis.dnd5e,
+      globalThis_dnd5e_canvas: !!globalThis.dnd5e?.canvas,
+      globalThis_dnd5e_canvas_AbilityTemplate: !!globalThis.dnd5e?.canvas?.AbilityTemplate,
+      resolved: !!AbilityTemplate
+    });
     if (!AbilityTemplate?.fromItem) return null;
     const item = findSpellItem(actor, spellName);
-    if (!item) return null;
+    if (!item) {
+      console.warn(`[${MODULE_ID}] previewSpellTemplate: item not found on actor`, { actor: actor?.name, spellName });
+      return null;
+    }
     const template = AbilityTemplate.fromItem(item);
-    if (!template) return null;
+    if (!template) {
+      console.warn(`[${MODULE_ID}] previewSpellTemplate: AbilityTemplate.fromItem returned null`);
+      return null;
+    }
     const placed = await template.drawPreview();
     if (!placed) return null;
-    // drawPreview returns either the document directly or an array
     return Array.isArray(placed) ? placed[0] : placed;
   } catch (e) {
     console.warn(`[${MODULE_ID}] previewSpellTemplate failed`, e);
@@ -93,21 +114,27 @@ export async function castSpell(name, opts = {}) {
   if (spell.kind === 'cone') {
     const placed = await previewSpellTemplate(source?.actor, name);
     if (placed) {
-      const tip = templateTip(placed);
+      // AA's approach (verified via theripper93/autoanimations source):
+      // atLocation(template) + rotateTowards(template) + explicit size.
+      // The size width = templateDistance × distancePixels, height = same for
+      // cone (template.distance × pixelsPerUnit). This makes the JB2A asset
+      // fill the actual cone shape rather than stretching as a line.
+      const dims = canvas?.dimensions;
+      const distancePixels = dims ? dims.size / dims.distance : 1;
+      const lengthPx = (placed.distance ?? 15) * distancePixels;
       await new Sequence()
         .effect()
           .file(spell.file)
-          .atLocation({ x: placed.x, y: placed.y })
-          .stretchTo(tip)
+          .atLocation(placed, { cacheLocation: true })
+          .rotateTowards(placed, { cacheLocation: true })
+          .size({ width: lengthPx, height: lengthPx })
         .play();
-      // Auto-delete the template after the animation completes so it
-      // doesn't linger on canvas (Hide Templates on VTT from foundry-
-      // table-mode hides them on the TV side, but GM canvas still shows).
       try {
         await placed.delete?.();
       } catch (_) { /* ignore — template may have already been removed */ }
       return;
     }
+    console.log(`[${MODULE_ID}] cone: template preview unavailable, falling back to crosshair`);
     // Fall through to crosshair-based fallback below
   }
 

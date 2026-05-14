@@ -84,10 +84,12 @@ function toSnake(name) {
 const KIND_KEYWORDS = {
   cone: ['.cone.', 'cone', 'fire_cone', 'flame_cone'],
   range: ['.projectile.', '.cast.', 'projectile', 'ray', 'bolt', 'missile', 'breath'],
-  marker: ['.loop.', '.target.loop.', 'rune', 'pentagram', 'magic_signs.rune', '_loop'],
+  // Use no-dot 'loop' too so we catch 'eyeloop' / 'pulse_loop' etc. — JB2A
+  // doesn't always wrap the descriptor in dots.
+  marker: ['loop', 'rune', 'pentagram', 'magic_signs.rune', 'pulse'],
   teleport: ['.poof.', 'poof', 'portal', 'misty_step', 'door'],
-  melee: ['.target.', '400px', 'healing.generic', '.complete.', 'cure_wounds.400px'],
-  self: ['.target.', '.aura.', '.loop.', '400px', 'bless.400px', 'shield_spell', 'mage_armor']
+  melee: ['.target.', '400px', 'healing.generic', '.complete.', 'cure_wounds.400px', 'loop'],
+  self: ['.target.', '.aura.', 'loop', '400px', 'bless.400px', 'shield_spell', 'mage_armor']
 };
 
 /**
@@ -135,11 +137,14 @@ const NAME_KIND_OVERRIDES = {
   "bestow curse": 'marker',
   "faerie fire": 'marker',
   "bane": 'marker',
-  // Caster-side buffs visualized on the caster (AA convention).
-  // Hunter's Mark in AA pulses on the ranger, not on the target;
-  // Bless radiates from the caster, not between caster and ally.
-  "hunter's mark": 'self',
-  "bless": 'self',
+  // Hunter's Mark: AA's canonical is target-anchored (marks the quarry).
+  // The "pulse on caster" Carl observed was likely from his Autorec config
+  // (playOn: source) or no target selected at cast — not AA's default.
+  "hunter's mark": 'marker',
+  // Bless: AA's free DB ships intro + loop variants; type=static with
+  // playOn determined by Autorec. We use melee for the typical "burst on
+  // each ally" visual — attached to clicked ally.
+  "bless": 'melee',
   "cure wounds": 'melee',
   "healing word": 'melee',
   "mass cure wounds": 'melee',
@@ -196,6 +201,13 @@ export function findJB2APath(spellName, kindHint = null) {
 
   const allCandidates = [...exactMatches, ...containsMatches];
   if (!allCandidates.length) return null;
+
+  // Diagnostic — see what JB2A actually has for this spell name
+  console.log(`[${MODULE_ID}] findJB2APath candidates`, {
+    spell: spellName,
+    kind: kindHint,
+    candidates: allCandidates
+  });
 
   let pool = allCandidates;
 

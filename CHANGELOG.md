@@ -2,6 +2,31 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.4] — 2026-05-14
+
+### Fixed — Cone uses AA's verified rendering approach (atLocation + rotateTowards + size)
+
+Read the theripper93/autoanimations V13 source — `src/animation-functions/standard-sequences/templateAnimation.js` lines 63–90 show AA's actual cone rendering: `atLocation(template) + rotateTowards(template) + .size({ width, height })` with explicit pixel sizes (`distance × distancePixels`). Not `stretchTo`. My v0.4.3 used stretchTo which deformed cone assets along a line.
+
+v0.4.4 now copies AA's exact approach.
+
+Also: AbilityTemplate lookup now tries 4 possible global paths (`globalThis.dnd5e.canvas`, `game.dnd5e.canvas`, `game.system.canvas`, `CONFIG.DND5E.canvas`) instead of just one. Logs which one resolves.
+
+### Reverted — Hunter's Mark and Bless from v0.4.3's `self` mapping
+
+AA research (jb2a-free-database.js lines 1933–2032, staticAnimation.js) confirms:
+
+- **Hunter's Mark** in AA's canonical Autorec preset is `playOn: target` — anchors to the **quarry**, not the caster. Carl's observation of caster-pulse was from his local Autorec config (playOn: source) or a cast with no target selected. **Reverted to `marker`** (target-anchored persistent rune).
+- **Bless** is `static` type, target-anchored typically. **Reverted to `melee`** for the canonical "burst on each ally" visual.
+
+### Improved — KIND_KEYWORDS recognize JB2A's non-dot-wrapped descriptors
+
+JB2A naming isn't consistent — variants are sometimes `.loop.` (with dots), sometimes `eyeloop` (concatenated). v0.4.3 only matched `.loop.` so Hunter's Mark's `pulse` variant got picked over the loop variant when names didn't follow the dot convention. v0.4.4 uses bare `loop` keyword in marker/melee/self preferences.
+
+### Added — Diagnostic: list ALL candidates per findJB2APath call
+
+`[foundry-spell-launcher] findJB2APath candidates { spell, kind, candidates: [...] }` logs every JB2A path matching the spell name before block/preference filtering. Pair this with the existing "chosen" log to see why a particular variant was picked. Helps debug "wrong asset variant" issues without code spelunking.
+
 ## [0.4.3] — 2026-05-14
 
 ### Added — Cone uses dnd5e AbilityTemplate preview (AA-style cone)
