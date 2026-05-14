@@ -100,29 +100,68 @@ async function previewSpellTemplate(actor, spellName) {
       hasDraw: typeof tpl.draw === 'function'
     });
 
-    // Try the known preview method names in order of likelihood.
-    let placed = null;
-    try {
-      if (typeof tpl.drawPreview === 'function') {
-        placed = await tpl.drawPreview();
-      } else if (typeof tpl.place === 'function') {
-        placed = await tpl.place();
-      } else if (typeof tpl.activate === 'function') {
-        placed = await tpl.activate();
-      } else {
-        console.warn(`[${MODULE_ID}] template instance has no known preview method`);
-        return null;
+    // dnd5e 5.x / Foundry V13: the preview method may not reliably return
+    // the placed template document — it's an interactive UI flow. Capture
+    // the placed template via the createMeasuredTemplate hook instead.
+    // This is the pattern Automated Animations uses (see traffic-cop.js
+    // — it does the same for Regions in V13). Resolves on first creation
+    // OR on a timeout (user pressed Escape / right-clicked to cancel).
+    const placed = await new Promise((resolve) => {
+      let hookId = null;
+      let resolved = false;
+      const timeoutMs = 60_000; // 1-minute cap
+      const cleanup = () => {
+        if (hookId !== null) try { Hooks.off('createMeasuredTemplate', hookId); } catch (_) {}
+      };
+      const timer = setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        console.log(`[${MODULE_ID}] template preview timed out`);
+        resolve(null);
+      }, timeoutMs);
+
+      hookId = Hooks.on('createMeasuredTemplate', (doc) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timer);
+        cleanup();
+        resolve(doc);
+      });
+
+      // Kick off the preview UI. The method may return immediately or after
+      // placement — we don't care, the hook is our ground truth.
+      try {
+        const fn = tpl.drawPreview ?? tpl.place ?? tpl.activate;
+        if (typeof fn !== 'function') {
+          resolved = true;
+          clearTimeout(timer);
+          cleanup();
+          console.warn(`[${MODULE_ID}] template instance has no known preview method`);
+          resolve(null);
+          return;
+        }
+        Promise.resolve(fn.call(tpl)).catch((e) => {
+          console.warn(`[${MODULE_ID}] preview method threw`, e);
+          // Don't resolve yet — user may still place via UI even if the
+          // wrapper promise rejected. Let the hook or timeout decide.
+        });
+      } catch (e) {
+        console.warn(`[${MODULE_ID}] preview method call failed`, e);
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          cleanup();
+          resolve(null);
+        }
       }
-    } catch (e) {
-      console.warn(`[${MODULE_ID}] template preview method threw`, e);
-      return null;
-    }
+    });
 
     if (!placed) {
-      console.log(`[${MODULE_ID}] preview method returned falsy (user cancelled?)`);
+      console.log(`[${MODULE_ID}] no template was placed (cancelled or timeout)`);
       return null;
     }
-    return Array.isArray(placed) ? placed[0] : placed;
+    return placed;
   } catch (e) {
     console.error(`[${MODULE_ID}] previewSpellTemplate failed`, e);
     return null;

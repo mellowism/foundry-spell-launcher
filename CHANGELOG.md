@@ -2,6 +2,16 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.7] — 2026-05-14
+
+### Fixed — Template placement captured via createMeasuredTemplate hook
+
+v0.4.6 successfully spawned the preview but `drawPreview()` returned a falsy value after the user clicked to place, so the module thought placement was cancelled and skipped the animation. The placed template just sat on canvas with no follow-up.
+
+Root cause: in Foundry V13 + dnd5e 5.x, the preview methods don't reliably return the placed document — they kick off interactive UI and may resolve before placement OR resolve to null even on success. **Automated Animations works around this by hooking `createRegion` / `createMeasuredTemplate` to catch placements**, not by trusting return values.
+
+v0.4.7 adopts that pattern: kicks off the preview, then awaits the next `createMeasuredTemplate` hook fire (with a 60s timeout for cancel). When the user places the template, the hook fires with the new document → animation triggers immediately.
+
 ## [0.4.6] — 2026-05-14
 
 ### Fixed — Template preview tries multiple V13 method names
