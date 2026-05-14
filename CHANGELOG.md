@@ -2,6 +2,21 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.3.4] — 2026-05-14
+
+### Changed — Cone uses stretchTo (AA-like directional cone)
+
+The `cone` kind handler previously used `atLocation(source) + rotateTowards(click) + scaleToObject(3)` — a fixed-scale rotation. For JB2A assets where the natural shape isn't strongly directional, this rendered as a square/target rather than a cone.
+
+**New behaviour:** `cone` uses `atLocation(source).stretchTo(crosshairResult)`. The asset stretches from the caster to the click point, giving:
+- Directional shape (forces alignment along the caster→click axis)
+- Length scales with click distance (click far = long cone, click near = short)
+- Same Sequencer call as `range` — the difference between kinds is now the JB2A asset choice, not the call
+
+This matches the Automated Animations template-flow feel without requiring a Foundry MeasuredTemplate preview step. Click distance becomes the visual length control.
+
+Future v0.4 may add a true template-preview cone flow if Carl wants the rotating-preview-then-confirm UX from AA.
+
 ## [0.3.3] — 2026-05-14
 
 ### Fixed — inferKindFromSpell reads dnd5e 5.x schema

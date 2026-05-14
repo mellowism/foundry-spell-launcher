@@ -53,12 +53,17 @@ export async function castSpell(name, opts = {}) {
       return;
 
     case 'cone':
+      // stretchTo gives an AA-template-like cone: the asset stretches from
+      // caster to crosshair point. Length scales with click distance, which
+      // matches the GM's intent (click far = long cone, click near = short).
+      // Previous impl (atLocation + rotateTowards + scaleToObject(3)) used a
+      // fixed scale rotated toward the click, which often looked like a
+      // square/target rather than a directional cone.
       await new Sequence()
         .effect()
           .file(spell.file)
           .atLocation(source)
-          .rotateTowards(crosshairResult)
-          .scaleToObject(3)
+          .stretchTo(crosshairResult)
         .play();
       return;
 
