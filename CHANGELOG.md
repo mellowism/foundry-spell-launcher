@@ -2,6 +2,18 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.9] — 2026-05-14
+
+### Fixed — Cone animation uses raw template document coordinates
+
+v0.4.8 captured the placed template via hook successfully but no animation played. Root cause: passing the MeasuredTemplate document to Sequencer's `atLocation()` raced the canvas placeable — in the `createMeasuredTemplate` hook frame, the document exists but its `.object` (PIXI placeable) hasn't been added to the canvas yet. Sequencer couldn't resolve a position from a docless-placeable doc.
+
+**Fix:** compute the cone origin + tip in pixel coordinates directly from `placed.x`, `placed.y`, `placed.direction`, `placed.distance`. No reliance on the placeable object. Cone direction trig is canonical (cos/sin of direction in radians).
+
+Added try/catch + logging around the Sequencer call so future failures are visible (`cone animation play() threw`).
+
+Template deletion is now delayed by 1500ms so the animation is visible before the template vanishes — previously the delete fired immediately after `play()` returned (which is when the animation STARTS, not finishes).
+
 ## [0.4.8] — 2026-05-14
 
 ### Fixed — Template placement: race three resolution sources

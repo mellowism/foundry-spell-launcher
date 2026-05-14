@@ -233,24 +233,41 @@ export async function castSpell(name, opts = {}) {
   if (spell.kind === 'cone') {
     const placed = await previewSpellTemplate(source?.actor, name);
     if (placed) {
-      // AA's approach (verified via theripper93/autoanimations source):
-      // atLocation(template) + rotateTowards(template) + explicit size.
-      // The size width = templateDistance × distancePixels, height = same for
-      // cone (template.distance × pixelsPerUnit). This makes the JB2A asset
-      // fill the actual cone shape rather than stretching as a line.
+      // Compute animation anchors from raw document fields. Passing the doc
+      // directly to Sequencer's atLocation() can race the canvas placeable
+      // object (it isn't rendered yet in the createMeasuredTemplate hook
+      // frame). Raw x/y/direction always works.
       const dims = canvas?.dimensions;
       const distancePixels = dims ? dims.size / dims.distance : 1;
       const lengthPx = (placed.distance ?? 15) * distancePixels;
-      await new Sequence()
-        .effect()
-          .file(spell.file)
-          .atLocation(placed, { cacheLocation: true })
-          .rotateTowards(placed, { cacheLocation: true })
-          .size({ width: lengthPx, height: lengthPx })
-        .play();
+      const rad = (placed.direction ?? 0) * (Math.PI / 180);
+      const origin = { x: placed.x ?? 0, y: placed.y ?? 0 };
+      const tip = {
+        x: origin.x + Math.cos(rad) * lengthPx,
+        y: origin.y + Math.sin(rad) * lengthPx
+      };
+      console.log(`[${MODULE_ID}] cone animation`, {
+        file: spell.file,
+        origin, tip, lengthPx,
+        direction: placed.direction,
+        distance: placed.distance
+      });
       try {
-        await placed.delete?.();
-      } catch (_) { /* ignore — template may have already been removed */ }
+        await new Sequence()
+          .effect()
+            .file(spell.file)
+            .atLocation(origin)
+            .rotateTowards(tip)
+            .size({ width: lengthPx, height: lengthPx })
+          .play();
+        console.log(`[${MODULE_ID}] cone animation play() completed`);
+      } catch (e) {
+        console.error(`[${MODULE_ID}] cone animation play() threw`, e);
+      }
+      // Brief delay so the animation is visible before the template vanishes.
+      setTimeout(() => {
+        try { placed.delete?.(); } catch (_) { /* ignore */ }
+      }, 1500);
       return;
     }
     console.log(`[${MODULE_ID}] cone: template preview unavailable, falling back to crosshair`);
