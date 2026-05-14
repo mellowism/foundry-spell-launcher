@@ -11,39 +11,82 @@ const PERSIST_PREFIX = `${MODULE_ID}::`;
  */
 async function previewSpellTemplate(actor, spellName) {
   try {
-    // Try multiple known locations for dnd5e's AbilityTemplate across V13 +
-    // dnd5e 3.x/4.x/5.x. Verified by reading the theripper93/autoanimations
-    // V13 fork — they delegate template creation to the system, but the
-    // exposed API in current dnd5e is at game.dnd5e.canvas.AbilityTemplate
-    // (alias globalThis.dnd5e.canvas.AbilityTemplate).
-    const AbilityTemplate =
+    const AT =
       globalThis.dnd5e?.canvas?.AbilityTemplate
       ?? game?.dnd5e?.canvas?.AbilityTemplate
       ?? game?.system?.canvas?.AbilityTemplate
       ?? CONFIG?.DND5E?.canvas?.AbilityTemplate
       ?? null;
-    console.log(`[${MODULE_ID}] AbilityTemplate lookup`, {
-      globalThis_dnd5e: !!globalThis.dnd5e,
-      globalThis_dnd5e_canvas: !!globalThis.dnd5e?.canvas,
-      globalThis_dnd5e_canvas_AbilityTemplate: !!globalThis.dnd5e?.canvas?.AbilityTemplate,
-      resolved: !!AbilityTemplate
+
+    // Deep diagnostic on the class itself — see exactly which factory
+    // methods are available in this dnd5e version.
+    const classMethods = AT
+      ? Object.getOwnPropertyNames(AT).filter(n => typeof AT[n] === 'function')
+      : [];
+    console.log(`[${MODULE_ID}] AbilityTemplate class`, {
+      resolved: !!AT,
+      classMethods,
+      hasFromItem: typeof AT?.fromItem === 'function',
+      hasFromActivity: typeof AT?.fromActivity === 'function'
     });
-    if (!AbilityTemplate?.fromItem) return null;
+    if (!AT) return null;
+
     const item = findSpellItem(actor, spellName);
     if (!item) {
-      console.warn(`[${MODULE_ID}] previewSpellTemplate: item not found on actor`, { actor: actor?.name, spellName });
+      console.warn(`[${MODULE_ID}] previewSpellTemplate: item not found`, { actor: actor?.name, spellName });
       return null;
     }
-    const template = AbilityTemplate.fromItem(item);
+
+    // dnd5e 5.x moved templates to the Activities system. A spell can have
+    // multiple activities (cast, attack, save, ...) and the template is on
+    // a specific activity. Find the activity with a template config.
+    const activities = item.system?.activities;
+    const activityList = activities?.contents
+      ?? (activities instanceof Map ? [...activities.values()] : Object.values(activities ?? {}));
+    const activityWithTemplate = activityList?.find?.(a => a?.target?.template?.type);
+    console.log(`[${MODULE_ID}] item activities`, {
+      hasActivities: !!activities,
+      activityCount: activityList?.length,
+      activityTypes: activityList?.map?.(a => a?.type),
+      foundTemplateActivity: !!activityWithTemplate,
+      templateType: activityWithTemplate?.target?.template?.type
+    });
+
+    let template = null;
+
+    // Strategy 1: dnd5e 5.x — fromActivity
+    if (!template && typeof AT.fromActivity === 'function' && activityWithTemplate) {
+      try {
+        template = AT.fromActivity(activityWithTemplate);
+        console.log(`[${MODULE_ID}] fromActivity result`, { template: !!template });
+      } catch (e) {
+        console.warn(`[${MODULE_ID}] fromActivity threw`, e);
+      }
+    }
+
+    // Strategy 2: legacy dnd5e 3.x/4.x — fromItem
+    if (!template && typeof AT.fromItem === 'function') {
+      try {
+        template = AT.fromItem(item);
+        console.log(`[${MODULE_ID}] fromItem result`, { template: !!template });
+      } catch (e) {
+        console.warn(`[${MODULE_ID}] fromItem threw`, e);
+      }
+    }
+
     if (!template) {
-      console.warn(`[${MODULE_ID}] previewSpellTemplate: AbilityTemplate.fromItem returned null`);
+      console.warn(`[${MODULE_ID}] previewSpellTemplate: no factory produced a template`);
       return null;
     }
+
     const placed = await template.drawPreview();
-    if (!placed) return null;
+    if (!placed) {
+      console.log(`[${MODULE_ID}] drawPreview returned falsy (user cancelled?)`);
+      return null;
+    }
     return Array.isArray(placed) ? placed[0] : placed;
   } catch (e) {
-    console.warn(`[${MODULE_ID}] previewSpellTemplate failed`, e);
+    console.error(`[${MODULE_ID}] previewSpellTemplate failed`, e);
     return null;
   }
 }

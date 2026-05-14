@@ -1,6 +1,6 @@
 {
   "name": "foundry-spell-launcher",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Foundry VTT V13 module — DM-side spell animation launcher (Sequencer + JB2A). No per-item config, no game mechanics, just visuals.",
   "private": true,
   "type": "module",

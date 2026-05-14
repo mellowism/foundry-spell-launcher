@@ -2,6 +2,18 @@
 
 All notable changes to Foundry Spell Launcher are documented here.
 
+## [0.4.5] — 2026-05-14
+
+### Fixed — Template preview tries dnd5e 5.x Activities model
+
+v0.4.4 only called `AbilityTemplate.fromItem(item)` which is the dnd5e 3.x/4.x API. dnd5e 5.x moved spell templates to the Activities system — each spell has an `activities` collection, and templates live on activities (not on the item directly). `fromItem` may return null on 5.x.
+
+**v0.4.5 tries both:**
+1. **First:** `AbilityTemplate.fromActivity(activity)` — picks the spell's first activity with a `template.type` defined (dnd5e 5.x path)
+2. **Fallback:** `AbilityTemplate.fromItem(item)` — legacy path
+
+Adds deep diagnostic logging — `[foundry-spell-launcher] AbilityTemplate class` lists every method on the class, plus `[foundry-spell-launcher] item activities` shows the activity structure on the spell. Together these reveal exactly which API is needed.
+
 ## [0.4.4] — 2026-05-14
 
 ### Fixed — Cone uses AA's verified rendering approach (atLocation + rotateTowards + size)
